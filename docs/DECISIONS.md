@@ -210,3 +210,20 @@ Her karar için:
 - **Model bağımlılığı:** multilingual-e5-small ve bge-m3 aynı XLM-RoBERTa tokenizer'ını kullanıyor (aynı metinde birebir aynı token'lar, doğrulandı). Bu yüzden model seçimi chunk'ları değiştirmiyor.
 - **Güvenlik ağı:** `ingest/index.py` her çalıştırmada önek dahil gerçek uzunluğu ölçüp sınırı aşan chunk sayısını yazdırıyor. Düzeltmeden sonra: **0** (en uzun 491).
 - **Ders:** Sessiz hatalar en tehlikelisi; varsayımlar (1,3 oranı) veri türüne göre ölçülmeli.
+
+### D25. Retriever kavramı ve embedding modeli seçimi (baseline)
+- **Retriever nedir:** LangChain'de "soru al → sıralı `Document` listesi döndür" sözleşmesi (`retriever.invoke(soru)`). `store.as_retriever(search_kwargs={"k": 10})` içeride: soruyu embedding'e çevirir (e5'te `"query: "` önekiyle), Qdrant'a en yakın 10 vektörü sorar, payload'dan `Document` kurar. Eval kodu ve cevap zinciri yalnızca bu arayüzü bilir; Aşama 5'te BM25/hibrit retriever kod değişmeden takılabilir.
+- **Ölçüm:** `uv run python -m eval.run --fast [--model ...]`. 16 cevaplanabilir soru, yalnızca dense arama, Türkçe sorgu (çeviri yok), top_k=10. Apple M4, 2026-11-24. Ham sonuçlar: `docs/benchmarks/fast_eval/*.json` (soru başına sıra dahil).
+
+| Model | Recall@1 | Recall@3 | Recall@5 | Recall@10 | MRR | Sorgu gecikmesi (ortanca) | İndeksleme (469 chunk) | Boyut |
+|---|---|---|---|---|---|---|---|---|
+| multilingual-e5-small | 0,375 | 0,531 | 0,594 | **0,750** | **0,509** | **22 ms** | **11 sn** | ~0,5 GB |
+| bge-m3 | 0,312 | 0,594 | 0,625 | **0,750** | 0,477 | 43 ms | 303 sn | ~2,3 GB |
+
+- **Yorum:** 16 soruda tek bir soru Recall'u 0,0625 değiştiriyor; aradaki farklar bu düzeyde, yani **anlamlı değil**. Soru bazında modeller birbirinden farklı soruları kaçırıyor (e5: q01, q12, q13; bge-m3: q11, q13, q15). Bu, ortalamaların küçük eval setinde ne kadar gürültülü olduğunu gösteriyor.
+- **Karar:** Varsayılan model **multilingual-e5-small**. Doğruluk eşit, sorgu 2 kat, indeksleme ~27 kat hızlı ve model 4,5 kat küçük. Eval seti 40–60 soruya çıktığında (Aşama 7) yeniden ölçülecek.
+- **Zayıf noktalar (Aşama 5–6'nın hedefi):**
+  - **Şekil soruları** (e5 Recall@10: 0,33): şekil chunk'ları kısa ve dağınık metinler.
+  - **Karşılaştırma soruları**: iki makaleden de chunk getirmek gerekiyor; tek bir Türkçe sorgu genelde bir makaleye yaslanıyor.
+  - **Tablo soruları** iyi (1,0): soruda "Tablo 6" gibi ifadeler ve tablo altyazısı eşleşiyor.
+- **Bilinen sınırlama:** Sonuç dosyaları, kod henüz commit edilmeden üretildiği için `git_commit` alanında `-dirty` işareti taşıyor.

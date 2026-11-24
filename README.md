@@ -55,7 +55,12 @@ docker compose -f infra/docker-compose.yml up -d qdrant
 
 # 9. Embed the chunks and write them to Qdrant (first run downloads the embedding model)
 uv run python -m ingest.index
+
+# 10. Fast eval: retrieval metrics (Recall@k, MRR) on the eval set, no LLM call
+uv run python -m eval.run --fast
 ```
+
+Fast-eval results are saved to `docs/benchmarks/fast_eval/` with the model, hardware and git commit.
 
 The model server is configured only through environment variables (`LLM_BASE_URL`, `LLM_MODEL`, `LLM_API_KEY`). To switch to vLLM or another provider, edit `.env`; no code changes are needed.
 

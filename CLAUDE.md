@@ -153,7 +153,7 @@ Repo iskeleti oluştukça doldurulacak:
 | Qdrant başlatma / durdurma | `docker compose -f infra/docker-compose.yml up -d qdrant` / `... down` |
 | İndeksleme (Qdrant) | `uv run python -m ingest.index` (`--model BAAI/bge-m3` ile başka model) |
 | Soru sorma (CLI) | _(Aşama 4)_ |
-| Hızlı eval | _(Aşama 2/5)_ |
+| Hızlı eval (retrieval) | `uv run python -m eval.run --fast` (`--model ...` ile başka model) |
 | Tam eval | _(Aşama 7)_ |
 | Servisleri başlatma | _(Aşama 8)_ |
 
