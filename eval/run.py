@@ -1,18 +1,23 @@
-"""Run the eval set against the retriever and save the results.
+"""Run the eval set and save the results.
 
---fast: retrieval only (Recall@k, MRR), no LLM call. The full eval (RAGAS) comes in Phase 7.
+--fast:    retrieval only (Recall@k, MRR), no LLM call.
+--answers: the full chain (retriever -> prompt -> LLM) on every question, with simple
+           automatic checks: correct refusals, false refusals, missing or invented citations.
+The full eval with RAGAS (faithfulness, answer relevancy) comes in Phase 7.
 
-Each run writes docs/benchmarks/fast_eval/<date>_<collection>.json with the model,
-hardware, git commit and per-question results, so every reported number is traceable.
+Each run writes a JSON file under docs/benchmarks/ with the models, hardware, git commit
+and per-question results, so every reported number is traceable.
 
 Usage:
     uv run python -m eval.run --fast                       # model from EMBEDDING_MODEL
     uv run python -m eval.run --fast --model BAAI/bge-m3
+    uv run python -m eval.run --answers
 """
 
 import argparse
 import json
 import platform
+import re
 import subprocess
 import time
 from datetime import datetime
@@ -21,13 +26,16 @@ from statistics import median
 
 from langchain_core.documents import Document
 
+from app.ask import CONTEXT_K, build_chain, check_citations, extract_citations, is_refusal
 from app.config import get_settings
+from app.llm import get_chat_model
 from app.vectorstore import collection_name, get_vectorstore
 from eval.dataset import QuestionType, SourceRef, load_dataset
 from eval.retrieval_metrics import Hit, evaluate, reciprocal_rank
 
 DATASET = Path("eval/dataset.jsonl")
 RESULTS_DIR = Path("docs/benchmarks/fast_eval")
+ANSWERS_DIR = Path("docs/benchmarks/answers")
 TOP_K = 10  # retrieve this many chunks; Recall@k is reported for k <= TOP_K
 KS = (1, 3, 5, 10)
 
@@ -99,6 +107,65 @@ def run_fast(model: str) -> dict:
     }
 
 
+def run_answers(model: str) -> dict:
+    settings = get_settings()
+    items = load_dataset(DATASET)
+    retriever = get_vectorstore(model).as_retriever(search_kwargs={"k": CONTEXT_K})
+    chain = build_chain(retriever, get_chat_model(settings))
+    chain.invoke("warm-up")  # loads the embedding model and the LLM
+
+    rows = []
+    for item in items:
+        start = time.perf_counter()
+        out = chain.invoke(item.question)
+        seconds = time.perf_counter() - start
+        answer = out["answer"].strip()
+        answerable = item.type != QuestionType.UNANSWERABLE
+        hits = [to_hit(d) for d in out["docs"]]
+        rows.append(
+            {
+                "id": item.id,
+                "type": item.type.value,
+                "question": item.question,
+                "expected": item.answer,
+                "answer": answer,
+                "refused": is_refusal(answer),
+                # did the context contain an expected page? (retrieval succeeded)
+                "context_has_source": answerable and reciprocal_rank(hits, item.sources) > 0,
+                "citations": extract_citations(answer),
+                "invented_citations": check_citations(answer, out["docs"]),
+                "context": [d.metadata["chunk_id"] for d in out["docs"]],
+                "seconds": round(seconds, 1),
+            }
+        )
+
+    answerable = [r for r in rows if r["type"] != QuestionType.UNANSWERABLE]
+    unanswerable = [r for r in rows if r["type"] == QuestionType.UNANSWERABLE]
+    answered = [r for r in answerable if not r["refused"]]
+    summary = {
+        "correct_refusals": f"{sum(r['refused'] for r in unanswerable)}/{len(unanswerable)}",
+        "false_refusals": f"{len(answerable) - len(answered)}/{len(answerable)}",
+        "false_refusals_with_source_in_context": [
+            r["id"] for r in answerable if r["refused"] and r["context_has_source"]
+        ],
+        "answers_without_citation": [r["id"] for r in answered if not r["citations"]],
+        "answers_with_invented_citation": [r["id"] for r in rows if r["invented_citations"]],
+        "seconds_median": round(median(r["seconds"] for r in rows), 1),
+    }
+    return {
+        "mode": "answers",
+        "date": datetime.now().isoformat(timespec="seconds"),
+        "git_commit": _git_commit(),
+        "hardware": _hardware(),
+        "llm": f"{settings.llm_model} @ {settings.llm_base_url}",
+        "llm_temperature": settings.llm_temperature,
+        "embedding_model": model,
+        "retrieval": f"dense only, Turkish query (no translation), context_k={CONTEXT_K}",
+        "summary": summary,
+        "per_question": rows,
+    }
+
+
 def print_summary(result: dict) -> None:
     print(f"\n{result['embedding_model']} | {result['retrieval']} | {result['hardware']}")
     columns = ["n", *(f"recall@{k}" for k in KS), "mrr"]
@@ -112,13 +179,26 @@ def print_summary(result: dict) -> None:
 
 def main() -> None:
     parser = argparse.ArgumentParser(description=__doc__.splitlines()[0])
-    parser.add_argument("--fast", action="store_true", help="retrieval metrics only, no LLM")
+    mode = parser.add_mutually_exclusive_group(required=True)
+    mode.add_argument("--fast", action="store_true", help="retrieval metrics only, no LLM")
+    mode.add_argument("--answers", action="store_true", help="answer every question with the LLM")
     parser.add_argument("--model", help="embedding model id (default: EMBEDDING_MODEL)")
     args = parser.parse_args()
-    if not args.fast:
-        parser.error("only --fast is implemented so far (the full eval comes in Phase 7)")
 
     model = args.model or get_settings().embedding_model
+    if args.answers:
+        result = run_answers(model)
+        for row in result["per_question"]:
+            flags = " REFUSED" * row["refused"] + " INVENTED" * bool(row["invented_citations"])
+            print(f"\n{row['id']} ({row['type']}, {row['seconds']}s){flags}\n{row['answer']}")
+        print("\n" + json.dumps(result["summary"], indent=2, ensure_ascii=False))
+        ANSWERS_DIR.mkdir(parents=True, exist_ok=True)
+        slug = re.sub(r"[^a-z0-9]+", "_", get_settings().llm_model.lower()).strip("_")
+        out = ANSWERS_DIR / f"{result['date'][:10]}_{slug}.json"
+        out.write_text(json.dumps(result, indent=2, ensure_ascii=False) + "\n", encoding="utf-8")
+        print(f"saved -> {out}")
+        return
+
     result = run_fast(model)
     print_summary(result)
 

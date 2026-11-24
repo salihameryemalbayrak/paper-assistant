@@ -143,7 +143,7 @@ Repo iskeleti oluştukça doldurulacak:
 
 | Ne | Komut |
 |---|---|
-| Kurulum | `uv sync` → `cp .env.example .env` → `ollama pull qwen3:4b` |
+| Kurulum | `uv sync` → `cp .env.example .env` → `ollama pull qwen3:4b-instruct` |
 | LLM bağlantı testi | `uv run python -m app.llm "Merhaba"` |
 | Testler | `uv run pytest` |
 | Lint + format kontrolü | `uv run ruff check . && uv run ruff format --check .` |
@@ -152,7 +152,7 @@ Repo iskeleti oluştukça doldurulacak:
 | Chunking | `uv run python -m ingest.chunk` → `data/chunks.jsonl` |
 | Qdrant başlatma / durdurma | `docker compose -f infra/docker-compose.yml up -d qdrant` / `... down` |
 | İndeksleme (Qdrant) | `uv run python -m ingest.index` (`--model BAAI/bge-m3` ile başka model) |
-| Soru sorma (CLI) | _(Aşama 4)_ |
+| Soru sorma (CLI) | `uv run python -m app.ask "soru"` |
 | Hızlı eval (retrieval) | `uv run python -m eval.run --fast` (`--model ...` ile başka model) |
 | Tam eval | _(Aşama 7)_ |
 | Servisleri başlatma | _(Aşama 8)_ |

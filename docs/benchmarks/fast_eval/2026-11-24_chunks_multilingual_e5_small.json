@@ -1,7 +1,7 @@
 {
   "mode": "fast",
-  "date": "2026-11-24T21:47:36",
-  "git_commit": "85cfee7-dirty",
+  "date": "2026-11-24T22:21:31",
+  "git_commit": "1918f16",
   "hardware": "Apple M4, macOS 26.6.2",
   "embedding_model": "intfloat/multilingual-e5-small",
   "collection": "chunks_multilingual_e5_small",
@@ -11,7 +11,7 @@
     "answerable": 16,
     "total": 20
   },
-  "latency_ms_median": 21.7,
+  "latency_ms_median": 16.1,
   "metrics": {
     "all": {
       "n": 16,

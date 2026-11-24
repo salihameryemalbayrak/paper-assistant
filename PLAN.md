@@ -345,7 +345,7 @@ Türkçe soru ──► TR→EN çeviri ──► BM25(EN) + Dense(TR, EN) ─�
 - [x] Aşama 1 — Veri
 - [x] Aşama 2 — Eval seti
 - [x] Aşama 3 — Ingest (OCR testi ertelendi: taranmış belge yok)
-- [ ] Aşama 4 — Dense + basit RAG (baseline)
+- [x] Aşama 4 — Dense + basit RAG (baseline: e5-small, qwen3:4b-instruct)
 - [ ] Aşama 5 — Hibrit arama + sorgu çevirisi
 - [ ] Aşama 6 — Reranker
 - [ ] Aşama 7 — Tam eval + Langfuse
@@ -358,8 +358,9 @@ Türkçe soru ──► TR→EN çeviri ──► BM25(EN) + Dense(TR, EN) ─�
 
 ## Açık sorular
 
-- Küçük yerel model hangisi olacak (Türkçe kalitesi göz önüne alınarak)? Başlangıç: `qwen3:4b`. Alternatifler `gemma3:4b`, `llama3.2:3b`; karar eval ile verilecek.
-- `qwen3:4b` kısa bir cevap için yaklaşık 22 sn sürdü (M4 Air, Ollama). Muhtemel sebep: modelin cevaptan önce görünmez "düşünme" metni üretmesi. Düşünme modunu kapatma yolu dokümantasyondan kontrol edilip gecikme ve doğruluk etkisi ölçülecek.
+- Küçük yerel model hangisi olacak (Türkçe kalitesi göz önüne alınarak)? Şu an: `qwen3:4b-instruct` (D27). Alternatifler `gemma3:4b`, `llama3.2:3b`; karar Aşama 9'da eval ile verilecek.
+- ~~qwen3:4b düşünme gecikmesi~~ → Ölçüldü (88 sn'ye kadar), OpenAI uyumlu API'de güvenilir biçimde kapatılamadı; `qwen3:4b-instruct`'a geçildi, soru başına ~6 sn (D27).
+- Sayfa düzeyindeki Recall iyimser: doğru sayfa, yanlış chunk (D28). Cevabı içeren chunk'ın getirilmesini ölçen ek bir ölçüt eklenmeli mi?
 - RAGAS hakem modeli: varsayılan olarak ücretsiz bir seçenek (daha büyük bir açık model, Colab'da). Ticari model yalnızca isteğe bağlı (bkz. CLAUDE.md, Maliyet kuralı).
 - Langfuse: `obs` profili (self-host) mi, Langfuse Cloud mu?
 - Şekiller için VLM açıklaması gerekecek mi, yoksa caption yeterli mi? (Şekil sorularının eval sonucuna göre karar verilecek.)

@@ -227,3 +227,43 @@ Her karar için:
   - **Karşılaştırma soruları**: iki makaleden de chunk getirmek gerekiyor; tek bir Türkçe sorgu genelde bir makaleye yaslanıyor.
   - **Tablo soruları** iyi (1,0): soruda "Tablo 6" gibi ifadeler ve tablo altyazısı eşleşiyor.
 - **Bilinen sınırlama:** Sonuç dosyaları, kod henüz commit edilmeden üretildiği için `git_commit` alanında `-dirty` işareti taşıyor.
+
+### D26. Cevap zinciri (LCEL) ve prompt tasarımı
+- **LCEL nedir:** LangChain bileşenlerinin hepsi *Runnable*: `invoke(girdi) → çıktı`. `|` operatörü bir bileşenin çıktısını sonrakine bağlar (Unix pipe gibi): `prompt | llm | StrOutputParser()`. Aynı arayüz sayesinde `stream`, `batch` ve Langfuse izleme bedavaya geliyor; retriever değiştirmek tek satır.
+- **Zincir:** `RunnableParallel(docs=retriever, question=RunnablePassthrough()).assign(answer=…)`.
+  - `RunnableParallel` aynı soruyu iki kola dağıtır: biri retriever'dan geçer, `RunnablePassthrough` soruyu olduğu gibi taşır → `{"docs", "question"}`.
+  - `.assign(answer=…)` bu sözlüğe cevabı ekler; dokümanlar kaybolmaz. Böylece cevaptaki kaynaklar, gerçekten getirilen chunk'larla karşılaştırılabiliyor.
+  - Alternatif: LangChain'in hazır `create_retrieval_chain` yardımcısı. Kullanmadım: aynı işi gizli yapıyor, açık hali hem öğretici hem kolay değiştirilir.
+- **Bağlam biçimi:** Her chunk `[kısa_ad, s.X, §Y]` etiketi altında **orijinal metniyle** (`text`, `search_text` değil; bkz. D20) veriliyor. Bölüm numarası varsa `§3.2`, yoksa adı (`§Abstract`); iki sayfalı chunk `s.2–3`.
+- **Prompt kuralları:** yalnızca bağlam; her iddiadan sonra etiketi aynen kopyala; cevap yoksa yalnızca "Dokümanda bulamadım."; cevap Türkçe, alıntı ve terimler orijinal dilde. Talimat İngilizce: küçük modeller İngilizce talimatı daha tutarlı izliyor.
+- **Neden "bulamadım" kuralı:** Kural olmasa model bağlamda olmayan bir soruya kendi bilgisiyle (ya da uydurarak) cevap verir; kaynaklı asistanın güvenilirliği tam olarak bu sınıra dayanıyor. Eval'deki 4 "dokümanda yok" sorusu bunu ölçüyor.
+- **Kaynak kontrolü:** `check_citations` cevaptaki etiketleri bağlama verilen etiketlerle karşılaştırır; bağlamda olmayan etiket = uydurulmuş kaynak. Şimdilik CLI uyarısı; Aşama 7'de metrik olacak.
+- **Bağlam boyutu:** İlk 5 chunk (~1.200 token). Hızlı eval'de Recall@5 = 0,59: bazı sorularda doğru chunk bağlama girmiyor. Reranker (Aşama 6) bunu hedefliyor.
+
+### D27. LLM: qwen3:4b yerine qwen3:4b-instruct
+- **Bulgu (Apple M4, Ollama 0.40.18):** qwen3:4b "hibrit" model: aynı ağırlıklarla "düşünen" ve "düşünmeyen" modlarda çalışabiliyor. Varsayılan modda "2+2 kaç?" için **2.892 token gizli düşünme, 88 sn**; cevap tek kelime. `/no_think` ekiyle bile 637 token, 18 sn.
+- **Kapatma denemeleri** (OpenAI uyumlu API üzerinden):
+  - `think: false`: yok sayıldı (2.591 token, 99 sn).
+  - `reasoning_effort: "none"`: düşünme ayrı alana gitmedi, **cevabın içine** yazıldı ("Okay, so the user is asking…").
+  - Sonuç: güvenilir değil; süre de soruya göre 10–99 sn arasında oynuyor.
+- **Karar:** Aynı ailenin yalnızca talimat izleyen sürümü **qwen3:4b-instruct** (Qwen3-4B-Instruct-2507, 2,5 GB). Kod değişmedi; yalnızca `LLM_MODEL` ortam değişkeni (model sunucusu kuralının faydası).
+- **Neden RAG için yeterli:** Burada model akıl yürütmüyor, verilen bağlamı özetleyip kaynak gösteriyor. Düşünme modu bu iş için gecikmeye değmez. "Düşünen" model ile karşılaştırma Aşama 9'daki matrise eklenebilir.
+
+### D28. İlk uçtan uca sonuç ve "doğru sayfa ≠ doğru chunk" dersi
+- **Ölçüm:** `uv run python -m eval.run --answers`. qwen3:4b-instruct (Ollama, Apple M4), e5-small, yalnızca dense, Türkçe sorgu, bağlamda 5 chunk. Sonuç dosyası: `docs/benchmarks/answers/2026-11-24_qwen3_4b_instruct.json`.
+
+| Ölçüt | Sonuç |
+|---|---|
+| Doğru reddetme ("dokümanda yok" soruları) | **4/4** |
+| Uydurulmuş kaynak etiketi | **0** |
+| Kaynak etiketi olmayan cevap | **0** |
+| Yanlış reddetme (cevaplanabilir sorular) | 6/16 |
+| Soru başına süre (ortanca) | 5,9 sn |
+
+- **Yanlış reddetmelerin nedeni aramada, modelde değil:**
+  - q11, q13, q15: beklenen sayfa ilk 5 chunk'ta yok. Bağlamda cevap olmadığı için "bulamadım" demek **doğru davranış**.
+  - q08, q09: beklenen sayfa bağlamda, ama **yanlış chunk**. Sayılar tablo chunk'ında (self_rag-0059, bge_m3-0049); getirilen ise aynı sayfada tabloyu anlatan paragraflar. Model sayıyı uydurmak yerine reddetti: istenen davranış.
+  - q02: getirilen chunk eğitimin sonrasını anlatıyor; veri toplama yöntemi komşu chunk'ta.
+- **Ders: sayfa düzeyindeki Recall iyimser.** Eval sayfa düzeyinde tanımlı (D12): aynı sayfadaki herhangi bir chunk isabet sayılıyor. Tablo ile onu anlatan paragraf aynı sayfada olduğunda metrik "buldu" diyor, model ise cevabı göremiyor. Sayfa düzeyi yine doğru seçim (chunking değişince eval seti bozulmuyor), ama yorumlanırken bu sınır bilinmeli. Olası ek ölçüt: cevabın anahtar ifadesini içeren chunk'ın getirilip getirilmediği (D21'deki kapsama kontrolünün arama versiyonu).
+- **Sonraki aşamaların hedefi:** Tablo ve şekil chunk'ları birebir kelime eşleşmesiyle bulunur ("Table 2", "PopQA", "Recall@100", "Figure 1"). Bu, BM25 ve İngilizce sorgu çevirisinin (Aşama 5) tam olarak çözmesi beklenen sorun. Aynı 20 soru ile yeniden ölçülecek.
+- **Gözlem:** q12'de cevap doğru ama kaynak olarak beklenen Şekil 1 (s.1) yerine s.9'daki "Ethics Consideration" paragrafı gösterildi. Etiket bağlamda var (uydurma değil), ama asıl kaynak değil. Faithfulness bunu ölçmez; kaynak doğruluğu Aşama 7'de ayrıca ele alınacak.

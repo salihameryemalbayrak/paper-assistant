@@ -36,7 +36,7 @@ cp .env.example .env
 
 # 3. Start the model server (in a separate terminal) and download a model
 ollama serve
-ollama pull qwen3:4b
+ollama pull qwen3:4b-instruct
 
 # 4. Check the LLM connection
 uv run python -m app.llm "Merhaba, kendini tanıtır mısın?"
@@ -58,6 +58,9 @@ uv run python -m ingest.index
 
 # 10. Fast eval: retrieval metrics (Recall@k, MRR) on the eval set, no LLM call
 uv run python -m eval.run --fast
+
+# 11. Ask a question: answer in Turkish with [paper, page, section] citations
+uv run python -m app.ask "Ragas bir RAG sistemini hangi boyutlarda değerlendirir?"
 ```
 
 Fast-eval results are saved to `docs/benchmarks/fast_eval/` with the model, hardware and git commit.
