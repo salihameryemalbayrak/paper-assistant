@@ -46,6 +46,7 @@ Zorluk modelde değil **aramada**. Hedef, küçük bir yerel model (3–4B) ile 
   - `obs`: Langfuse
 - **CI:** GitHub Actions.
 - LangChain API'si hızlı değişir. Sürümler sabitlenir; bir bileşenin davranışı tahmin edilmez, dokümantasyondan doğrulanır.
+- `langchain-community` kullanılmaz (bakımı bırakılıyor). `langchain-classic` yalnızca `EnsembleRetriever` için kullanılır. Yeni bir bileşen eklenmeden önce paketinin bakım durumu ve kaynak kodundaki varsayılan davranışı kontrol edilir (ör. Qdrant entegrasyonunda IDF varsayılan olarak kapalı, bkz. DECISIONS D29).
 
 ## Dil stratejisi (Türkçe soru, İngilizce makale)
 BM25 kelime eşleşmesine dayanır; Türkçe sorgu İngilizce metinle eşleşmez. Bu yüzden arama şöyle çalışır:
@@ -72,6 +73,7 @@ Kod yalnızca OpenAI uyumlu bir API'ye konuşur. Model sunucusu ortam değişken
 - `LLM_BASE_URL`, `LLM_MODEL`, `LLM_API_KEY`
 - Mac'te Ollama, benchmark için vLLM, karşılaştırma için bir ticari API kullanılır; **kodda değişiklik gerektirmeden**.
 - Model adı veya adres koda gömülmez.
+- Yerel modelde, düşünme modu güvenilir biçimde kapatılamayan hibrit ("thinking") modeller yerine instruct sürümü kullanılır (ör. `qwen3:4b-instruct`; gerekçe ve ölçüm: DECISIONS D27).
 
 ## Ortam kısıtları
 - **Ana geliştirme:** MacBook Air M4 (256 GB SSD). Diske dikkat: Docker disk sınırı koy, `ollama` modellerini temizle, büyük veriyi git'e koyma.
@@ -102,6 +104,7 @@ Kod yalnızca OpenAI uyumlu bir API'ye konuşur. Model sunucusu ortam değişken
 - RAGAS'ın hakem LLM'i sabit tutulur; adı her sonuçla birlikte yazılır.
 - Retrieval veya prompt değişikliği ölçüm olmadan birleştirilmez.
 - Rapor edilen her sayı gerçek ölçümden gelir. Ölçülmemiş sayı yazılmaz; donanım ve model adı her sonuçla birlikte belirtilir.
+- Her sonuç dosyasının adı, sonucu değiştiren tüm seçenekleri içerir (tarih, retriever, model). Eski bir sonuç yeni bir çalıştırmayla asla ezilmez.
 - **Karşılaştırma matrisi:** küçük yerel model, daha büyük açık model ve ticari API (isteğe bağlı, bkz. Maliyet kuralı); doğruluk, gecikme ve maliyet açısından karşılaştırılır.
 
 ## Çalışma kuralları (öğrenme odaklı)
@@ -114,12 +117,14 @@ Kodun tamamını sen yazarsın. Ben kodu okuyup anlayacağım, sorular soracağ�
 - Ben "bunu açıkla" veya "bunu ben yazayım" dersem o bölümde buna uy.
 - Önce uçtan uca çalışan basit bir sürüm, sonra katman katman geliştirme. Gereksiz soyutlama ve erken optimizasyon yok.
 - Bilmediğin bir sürüm veya API davranışını tahmin etme; dokümantasyona bak veya bana söyle.
+- Commit ve push'u ben yaparım; her adım sonunda commit komutlarını ver.
 
 ## Kod kuralları
 - Python 3.11+, tip ipuçları, `ruff` + `pytest`.
 - Yapılandırma ortam değişkenleri ve tek bir ayar modülü (`app/config.py`) ile yapılır. Sırlar (API anahtarı) koda veya git'e girmez; `.env.example` güncel tutulur.
 - Türkçe metin işleme: Unicode normalizasyonuna ve Türkçe karakterlere (ı, İ, ş, ğ) dikkat et; testlere Türkçe örnek ekle.
 - Her adımda çalıştırılabilir bir komut ve kısa bir README bölümü bırak.
+- Veriyi sessizce bozabilecek her adım (token sınırı aşımı, tanınmayan kaynak etiketi, boş sonuç) bir sayaç yazdırır ya da test edilir. Örnek: `ingest/index.py` sınırı aşan chunk sayısını yazdırır (DECISIONS D24).
 - **Dil kuralı:**
   - İngilizce: README, kod, kod yorumları, commit mesajları.
   - Türkçe: `docs/DECISIONS.md` ve `PLAN.md`.
@@ -144,6 +149,7 @@ Repo iskeleti oluştukça doldurulacak:
 | Ne | Komut |
 |---|---|
 | Kurulum | `uv sync` → `cp .env.example .env` → `ollama pull qwen3:4b-instruct` |
+| Günlük başlangıç | Docker Desktop'ı aç → `docker compose -f infra/docker-compose.yml up -d qdrant` → `ollama serve` |
 | LLM bağlantı testi | `uv run python -m app.llm "Merhaba"` |
 | Testler | `uv run pytest` |
 | Lint + format kontrolü | `uv run ruff check . && uv run ruff format --check .` |
