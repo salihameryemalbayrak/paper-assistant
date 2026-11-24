@@ -343,7 +343,7 @@ Türkçe soru ──► TR→EN çeviri ──► BM25(EN) + Dense(TR, EN) ─�
 
 - [x] Aşama 0 — İskelet
 - [x] Aşama 1 — Veri
-- [ ] Aşama 2 — Eval seti
+- [x] Aşama 2 — Eval seti
 - [ ] Aşama 3 — Ingest
 - [ ] Aşama 4 — Dense + basit RAG (baseline)
 - [ ] Aşama 5 — Hibrit arama + sorgu çevirisi

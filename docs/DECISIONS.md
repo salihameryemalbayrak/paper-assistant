@@ -98,3 +98,31 @@ Her karar için:
 ### D11. İndirme için standart kütüphane (`urllib`)
 - **Karar:** Yeni bağımlılık eklenmedi.
 - **Neden:** `httpx` `.venv`'de var ama `langchain-openai`'ın dolaylı bağımlılığı olarak geldi. `pyproject.toml`'da yazmayan bir pakete gizlice bağımlı olmak, o paket kaldırıldığında kodu kırar. Basit bir GET isteği için standart kütüphane yeterli.
+
+---
+
+## Aşama 2 — Eval seti
+
+### D12. Eval-first: soruları sistemden önce yazmak
+- **Karar:** 20 soru, arama sistemi yokken yazıldı ve PDF'lerle elle doğrulandı.
+- **Neden:** Sistem kurulduktan sonra soru yazılırsa, farkında olmadan sistemin iyi cevapladığı sorular seçilir. Önce "iyi"nin tanımı, sonra sistem.
+
+### D13. Doğru sonucu (makale, sayfa) ile tanımlamak
+- **Karar:** Bir arama sonucu, beklenen makalenin beklenen sayfasından geliyorsa "isabet" sayılıyor. Chunk id'si kullanılmıyor.
+- **Alternatif:** "Doğru cevap chunk #142'de" gibi chunk düzeyinde etiket.
+- **Neden:** Chunk boyutunu defalarca değiştireceğiz. Chunk id'leri her seferinde değişir ve eval seti çöpe gider. Sayfa ise sabit (sürüm sabitlemesiyle birlikte, bkz. D10).
+- **Bilinen sınırlama:** Her bilgi için tek bir kaynak sayfa tutuluyor. Bilgi başka bir sayfada da geçiyorsa (ör. q06: s.1 ve s.2), sistem doğru bilgiyi bulsa bile "kaçırdı" sayılabilir. Ölçümlerde sorun olursa şemaya "bu sayfalardan herhangi biri yeterli" seçeneği eklenecek.
+
+### D14. Metrikler: Recall@k ve MRR (elle yazıldı)
+- **Recall@k:** Beklenen kaynakların kaçı ilk k sonuçta? Karşılaştırma sorularında iki kaynak var; biri bulunduysa 0,5.
+- **MRR:** İlk doğru sonucun sırasının tersi (1., 1/2, 1/3 …), soruların ortalaması. Recall "buldu mu?" diye sorar, MRR "ne kadar yukarıda buldu?" diye. LLM'e yalnızca ilk birkaç sonuç gittiği için sıra önemli.
+- **Neden kütüphane yok:** Metriklerin tanımını tam olarak bilmek ve mülakatta formülünü anlatabilmek için.
+- "Dokümanda yok" soruları bu metriklere girmiyor (bulunacak sayfa yok); Aşama 7'de "doğru reddetme oranı" ile ölçülecek.
+
+### D15. Soru türleri ve tuzak sorular
+- **Dağılım:** 6 tek sayfa, 4 tablo, 3 şekil, 3 karşılaştırma, 4 "dokümanda yok". Sonuçlar türe göre ayrı raporlanıyor ("tablo sorularında kötüyüz" gibi tespitler için).
+- **Tuzaklar:**
+  - q17'de makalede yakın ama farklı bir bilgi var (eğitim süresi var, maliyet yok).
+  - q20'de cevap modelin ezberinde var (bge-m3 vektör boyutu, model kartında) ama makalede yok. Ayrıca "1024" makalede başka bir anlamda (girdi uzunluğu) geçiyor.
+  - Sistem bu sorularda "Dokümanda bulamadım" demeli; doğru bir rakam bile söylese kaynaksız cevap hata sayılıyor.
+- **Ders:** "Dokümanda yok" kontrolünü ilk kez metin aramasıyla yaptım ve arama aracı "1024"ü sessizce kaçırdı. Elle doğrulama bu hatayı yakaladı. "Yok" iddiası, "var" iddiasından daha zor doğrulanıyor.

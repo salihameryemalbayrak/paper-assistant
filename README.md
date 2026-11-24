@@ -59,12 +59,13 @@ uv run ruff check . && uv run ruff format --check .  # lint + format check
 ```
 app/        # configuration, LLM client, text utilities (retrieval and API to come)
 ingest/     # data pipeline: download (PDF parsing and chunking to come)
+eval/       # hand-verified eval set (dataset.jsonl) and retrieval metrics (Recall@k, MRR)
 data/       # SOURCES.md only; downloaded PDFs stay local
 tests/      # pytest suite
 docs/       # design decisions (DECISIONS.md, in Turkish), benchmarks
 ```
 
-More folders (`eval/`, `ui/`, `infra/`) are added as the corresponding phases start.
+More folders (`ui/`, `infra/`) are added as the corresponding phases start.
 
 ## Data and licensing
 
