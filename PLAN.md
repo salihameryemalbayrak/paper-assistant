@@ -13,6 +13,39 @@ Takvim yok; her aşama, "bitti" kriteri sağlanınca tamamlanmış sayılır.
 
 ---
 
+## Nerede kaldık (son oturum: 2026-11-24)
+
+**Durum:** Aşama 0–4 tamam. Aşama 5'in 5a (BM25) ve 5b (hibrit, RRF) adımları tamam ve commit edildi (`b9bae16`). Çalışma ağacı temiz.
+
+**Yarım kalan iş: 5c, TR→EN sorgu çevirisi.** Henüz hiç kod yazılmadı. Plan:
+1. `app/translate.py`: LCEL çeviri zinciri (`prompt | llm | StrOutputParser()`, temperature 0). İngilizce gelen soru çevrilmeden geçebilmeli.
+2. 20 sorunun çevirisini bir kez üret, `eval/translations.jsonl`'a kaydet ve commit et. Hızlı eval bu dosyayı kullanır (LLM çağırmaz, CI'da çalışabilir). **Çevirileri kullanıcı kontrol eder.**
+3. `app/retrieval.py`'ye çevirili varyantlar: dense (EN), dense (TR+EN), BM25 (EN), hibrit çevirili (dense TR + dense EN + BM25 EN, RRF). Çeviri bir kez yapılır, sonra dallara dağıtılır (D29'daki `{"tr", "en"}` sözlüğü fikri; `EnsembleRetriever`'a sözlük girdisi geçirilebildiği testle doğrulanmalı).
+4. Ablation tablosu (aşağıdaki Aşama 5 bölümü) ve çeviri gecikmesi ölçümü → DECISIONS D32. Varsayılan retriever ölçüme göre seçilir (şu an `RETRIEVER=dense`).
+5. Aşama 5 yoklaması (2–3 soru), sonra Aşama 6 (reranker).
+
+**Yarın ilk yapılacak:**
+1. Docker Desktop'ı aç → `docker compose -f infra/docker-compose.yml up -d qdrant`
+2. Ollama çalışmıyorsa `ollama serve` (model: `qwen3:4b-instruct`)
+3. Ortamın sağlam olduğunu doğrula: `uv run pytest` (69 geçmeli) ve `uv run python -m eval.run --fast` (dense, e5-small: Recall@10 0,750, MRR 0,509 çıkmalı)
+4. 5c'nin 1. adımı: çeviri zinciri.
+
+**Bilinen hatalar ve sınırlamalar:**
+- **Büyük tablolar neredeyse kopya parçalara bölünüyor:** Self-RAG Tablo 2, uzun altyazıyı ve başlığı tekrarlayan 22 parçaya bölünmüş; ne dense ne BM25 doğru parçayı ayırt edebiliyor (q08). Olası çözüm: parçalarda altyazıyı kısaltmak. Ölçülerek denenecek.
+- **Sayfa düzeyindeki Recall iyimser:** Doğru sayfanın yanlış chunk'ı da isabet sayılıyor (q08, q09: tabloyu anlatan paragraf geldi, tablo gelmedi). D28.
+- **4B model karşılaştırma sorularında makaleleri karıştırıyor:** q14 (M3'ün yöntemini E5'e), q16 (QLoRA bulgusunu Ragas'a mal ediyor). Etiket geçerli, iddia yanlış; otomatik sayımlar yakalamıyor → Aşama 7 (RAGAS faithfulness), Aşama 9 (daha büyük model).
+- **Model bazen kısmi cevabın sonuna "Dokümanda bulamadım." ekliyor:** Prompt'taki "yalnızca bu cümle" kuralına uymuyor. Ölçümde `partial` olarak ayrılıyor; prompt düzeltmesi ölçümle yapılmalı.
+- **Model kaynak etiketini bozabiliyor:** `bge_m-3` (doğrusu `bge_m3`). `check_citations` yakalıyor.
+- **RRF tek listede bulunan chunk'ı geriye itiyor:** q11 yalnızca dense'te (6.) vardı, hibritte ilk 10'dan düştü. D31.
+- **Büyük şekil chunk'ları bölünürken altyazı tekrarlanmıyor** (Aşama 3'ten açık).
+- **Eval seti İngilizce terim ağırlıklı:** BM25'i kolaylaştırıyor olabilir; Aşama 7'de terimsiz doğal Türkçe sorular eklenmeli. D30.
+- **Hızlı eval Qdrant gerektiriyor:** CI'da henüz çalışmıyor (Aşama 7'de bellekteki Qdrant veya önceden hesaplanmış vektörlerle çözülecek).
+- Docling'in testlerde verdiği 3 DeprecationWarning zararsız (Docling'in kendi kodundan).
+
+**Diskte bekleyen, kullanıcı kararı gereken:** `qwen3:4b` (2,5 GB, artık kullanılmıyor), bge-m3 modeli ve koleksiyonu (~2,3 GB, Aşama 7'de yeniden ölçüm için tutuluyor). Boş alan ~28 GB.
+
+---
+
 ## Genel akış (hedef mimari)
 
 ```
@@ -181,19 +214,19 @@ Türkçe soru ──► TR→EN çeviri ──► BM25(EN) + Dense(TR, EN) ─�
 **Hedef:** Projenin yıldızı. Her eklemenin katkısını ölçmek.
 
 **Yapılacaklar:**
-- BM25 retriever (İngilizce metin üzerinde).
-- TR→EN sorgu çevirisi (LLM adımı).
-- Dense arama TR ve EN sorgularla.
-- Sonuçları RRF ile birleştir. LangChain'in hazır birleştirici retriever'ı kullanılır; RRF formülü (`Σ 1/(k + sıra)`) açıklanır ve elle küçük bir örnekle doğrulanır.
+- [x] **5a** BM25 retriever: kendi `BaseRetriever` sınıfımız (`app/bm25.py`, rank-bm25, teknik terimleri koruyan kelime ayırıcı, stopword'ler). D29, D30.
+- [x] **5b** RRF ile birleştirme: LangChain `EnsembleRetriever` (`app/retrieval.py`, `RETRIEVER=dense|bm25|hybrid`). RRF formülü testlerde elle örnekle doğrulandı. D31.
+- [ ] **5c** TR→EN sorgu çevirisi (LLM adımı), dense arama TR ve EN sorgularla, çevirili hibrit. Ayrıntılı plan: yukarıdaki "Nerede kaldık".
 - **Ablation:** Her varyant hızlı eval ile ölçülür ve tabloya yazılır:
-  - yalnızca dense (TR)
-  - dense (TR+EN)
-  - BM25 (EN)
-  - hibrit, çevirisiz
-  - hibrit, çevirili
+  - [x] yalnızca dense (TR): Recall@10 0,750, MRR 0,509
+  - [x] yalnızca BM25 (TR): Recall@10 0,750, MRR 0,485 (sıra değişikliği: BM25 Türkçe sorguyla da ölçüldü)
+  - [x] hibrit, çevirisiz: Recall@10 0,812, MRR 0,487
+  - [ ] dense (TR+EN)
+  - [ ] BM25 (EN)
+  - [ ] hibrit, çevirili
 - Çeviri adımının gecikmesi ölçülür.
 
-**Çıktı / komut:** `uv run python -m eval.run --fast --variant hybrid_translate`
+**Çıktı / komut:** `uv run python -m eval.run --fast --retriever <dense|bm25|hybrid>` (çevirili varyantlar 5c'de eklenecek); cevap eval: `uv run python -m eval.run --answers` (`RETRIEVER=...` ile)
 
 **Bitti kriteri:** Ablation tablosu `docs/benchmarks/` altında. Seçilen varyantın gerekçesi sayılarla yazıldı.
 
@@ -346,7 +379,7 @@ Türkçe soru ──► TR→EN çeviri ──► BM25(EN) + Dense(TR, EN) ─�
 - [x] Aşama 2 — Eval seti
 - [x] Aşama 3 — Ingest (OCR testi ertelendi: taranmış belge yok)
 - [x] Aşama 4 — Dense + basit RAG (baseline: e5-small, qwen3:4b-instruct)
-- [ ] Aşama 5 — Hibrit arama + sorgu çevirisi
+- [ ] Aşama 5 — Hibrit arama + sorgu çevirisi (5a BM25 ✓, 5b hibrit ✓, 5c çeviri kaldı)
 - [ ] Aşama 6 — Reranker
 - [ ] Aşama 7 — Tam eval + Langfuse
 - [ ] Aşama 8 — API + arayüz + Docker Compose
@@ -363,6 +396,9 @@ Türkçe soru ──► TR→EN çeviri ──► BM25(EN) + Dense(TR, EN) ─�
 - Sayfa düzeyindeki Recall iyimser: doğru sayfa, yanlış chunk (D28). Cevabı içeren chunk'ın getirilmesini ölçen ek bir ölçüt eklenmeli mi?
 - RAGAS hakem modeli: varsayılan olarak ücretsiz bir seçenek (daha büyük bir açık model, Colab'da). Ticari model yalnızca isteğe bağlı (bkz. CLAUDE.md, Maliyet kuralı).
 - Langfuse: `obs` profili (self-host) mi, Langfuse Cloud mu?
+- Çeviri gerekli mi? BM25 Türkçe sorguyla da dense kadar iyi çıktı (sorulardaki İngilizce terimler sayesinde, D30). Çevirinin ek katkısı 5c'de ölçülecek; soru başına ~1 sn'lik LLM çağrısına değip değmediği sayıyla karara bağlanacak.
+- Hibrit mi, dense mi? Hibrit Recall@10'u artırdı ama ilk 5'te ve cevaplarda fark yok (D31). Reranker (Aşama 6) ile yeniden değerlendirilecek.
+- fastembed BM25 (kök bulmalı) ile bizim BM25'in (sayıları bölmeyen) karşılaştırması: isteğe bağlı deney (D29).
 - Şekiller için VLM açıklaması gerekecek mi, yoksa caption yeterli mi? (Şekil sorularının eval sonucuna göre karar verilecek.)
 - ~~Derlem konusu~~ → RAG / arama / LLM makaleleri (bkz. DECISIONS D8). Sıradaki CC BY adaylar: ReAct (2210.03629), Chain-of-Thought (2201.11903), vLLM/PagedAttention (2309.06180).
 - OCR testi için taranmış sayfa: arXiv PDF'leri dijital; Aşama 3'te açık lisanslı, taranmış bir belge bulunacak.
