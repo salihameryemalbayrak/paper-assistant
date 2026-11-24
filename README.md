@@ -40,6 +40,9 @@ ollama pull qwen3:4b
 
 # 4. Check the LLM connection
 uv run python -m app.llm "Merhaba, kendini tanıtır mısın?"
+
+# 5. Download the papers listed in data/SOURCES.md (licenses are re-checked)
+uv run python -m ingest.download
 ```
 
 The model server is configured only through environment variables (`LLM_BASE_URL`, `LLM_MODEL`, `LLM_API_KEY`). To switch to vLLM or another provider, edit `.env`; no code changes are needed.
@@ -55,11 +58,13 @@ uv run ruff check . && uv run ruff format --check .  # lint + format check
 
 ```
 app/        # configuration, LLM client, text utilities (retrieval and API to come)
+ingest/     # data pipeline: download (PDF parsing and chunking to come)
+data/       # SOURCES.md only; downloaded PDFs stay local
 tests/      # pytest suite
 docs/       # design decisions (DECISIONS.md, in Turkish), benchmarks
 ```
 
-More folders (`ingest/`, `eval/`, `ui/`, `infra/`, `data/`) are added as the corresponding phases start.
+More folders (`eval/`, `ui/`, `infra/`) are added as the corresponding phases start.
 
 ## Data and licensing
 

@@ -341,8 +341,8 @@ Türkçe soru ──► TR→EN çeviri ──► BM25(EN) + Dense(TR, EN) ─�
 
 ## İlerleme kontrol listesi
 
-- [ ] Aşama 0 — İskelet
-- [ ] Aşama 1 — Veri
+- [x] Aşama 0 — İskelet
+- [x] Aşama 1 — Veri
 - [ ] Aşama 2 — Eval seti
 - [ ] Aşama 3 — Ingest
 - [ ] Aşama 4 — Dense + basit RAG (baseline)
@@ -363,4 +363,5 @@ Türkçe soru ──► TR→EN çeviri ──► BM25(EN) + Dense(TR, EN) ─�
 - RAGAS hakem modeli: varsayılan olarak ücretsiz bir seçenek (daha büyük bir açık model, Colab'da). Ticari model yalnızca isteğe bağlı (bkz. CLAUDE.md, Maliyet kuralı).
 - Langfuse: `obs` profili (self-host) mi, Langfuse Cloud mu?
 - Şekiller için VLM açıklaması gerekecek mi, yoksa caption yeterli mi? (Şekil sorularının eval sonucuna göre karar verilecek.)
-- Derlem konusu: genel yapay zekâ mı, belirli bir alt alan mı (ör. NLP, bilgisayarlı görü)?
+- ~~Derlem konusu~~ → RAG / arama / LLM makaleleri (bkz. DECISIONS D8). Sıradaki CC BY adaylar: ReAct (2210.03629), Chain-of-Thought (2201.11903), vLLM/PagedAttention (2309.06180).
+- OCR testi için taranmış sayfa: arXiv PDF'leri dijital; Aşama 3'te açık lisanslı, taranmış bir belge bulunacak.

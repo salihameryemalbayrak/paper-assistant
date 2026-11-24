@@ -147,7 +147,7 @@ Repo iskeleti oluştukça doldurulacak:
 | LLM bağlantı testi | `uv run python -m app.llm "Merhaba"` |
 | Testler | `uv run pytest` |
 | Lint + format kontrolü | `uv run ruff check . && uv run ruff format --check .` |
-| Veri indirme | _(Aşama 1)_ |
+| Veri indirme | `uv run python -m ingest.download` |
 | İndeksleme | _(Aşama 3)_ |
 | Soru sorma (CLI) | _(Aşama 4)_ |
 | Hızlı eval | _(Aşama 2/5)_ |

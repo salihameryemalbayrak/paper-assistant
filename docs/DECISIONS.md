@@ -69,3 +69,32 @@ Her karar için:
 ### D7. Maliyet: varsayılan her şey ücretsiz
 - **Karar:** Proje hiçbir ücretli servis olmadan tamamlanabilir. Ticari API, kiralık GPU ve ücretli hakem model yalnızca isteğe bağlı.
 - **Neden:** Projenin herkes tarafından ücretsiz olarak yeniden üretilebilmesi. Bu tasarım ilkesiyle de uyumlu: küçük yerel model + iyi arama.
+
+---
+
+## Aşama 1 — Veri
+
+### D8. Derlem konusu: RAG, arama ve LLM makaleleri
+- **Karar:** İlk 5 makale: Ragas, Self-RAG, M3-Embedding (bge-m3), E5, QLoRA.
+- **Neden:**
+  - Projenin kullandığı tekniklerin makaleleri. Eval sorularını yazarken içeriği öğrenmiş oluyorum.
+  - Yapıları farklı: kısa (Ragas, 8 sayfa) ve uzun (Self-RAG, 30 sayfa), tablo ağırlıklı (bge-m3, QLoRA), şekil ağırlıklı (Self-RAG).
+  - bge-m3 ile E5 aynı konuda: "iki makale karşılaştırma" soruları için doğal bir çift.
+- **Sınır:** *Attention Is All You Need*, BERT ve orijinal RAG makalesi arXiv'in varsayılan lisansında; kullanılamadı.
+
+### D9. Lisans: yalnızca CC BY / CC0, otomatik doğrulama
+- **Karar:** İndirme betiği her makalenin lisansını arXiv'in OAI-PMH arayüzünden tekrar kontrol ediyor; izin listesinde olmayanı indirmiyor.
+- **Alternatif:** Lisansı elle bakıp tabloya yazmak.
+- **Neden:**
+  - "Açık erişim" ile "açık lisans" aynı şey değil. arXiv'in varsayılan lisansı (`nonexclusive-distrib`) yeniden dağıtıma izin vermiyor.
+  - İnsan hatası olmasın diye lisans koddan doğrulanıyor.
+  - CC BY-SA ve CC BY-NC de dışarıda: SA, türev işin aynı lisansla paylaşılmasını; NC, ticari olmayan kullanımı şart koşuyor. CV projesinde bu belirsizliği istemedim.
+  - 18 adaydan 9'u CC BY 4.0 çıktı.
+
+### D10. Sürüm sabitleme (arXiv `v2` gibi)
+- **Karar:** `SOURCES.md`'de her makale sürümüyle yazılı (`2309.15217v2`).
+- **Neden:** Eval seti "cevap sayfa 7'de" diyor. Yazarlar yeni bir sürüm yüklerse sayfalar kayar ve eval sessizce bozulur. `uv.lock` ile aynı fikir: tekrarlanabilirlik.
+
+### D11. İndirme için standart kütüphane (`urllib`)
+- **Karar:** Yeni bağımlılık eklenmedi.
+- **Neden:** `httpx` `.venv`'de var ama `langchain-openai`'ın dolaylı bağımlılığı olarak geldi. `pyproject.toml`'da yazmayan bir pakete gizlice bağımlı olmak, o paket kaldırıldığında kodu kırar. Basit bir GET isteği için standart kütüphane yeterli.
