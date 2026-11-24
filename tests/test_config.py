@@ -1,0 +1,31 @@
+import pytest
+from pydantic import ValidationError
+
+from app.config import Settings
+
+
+def test_settings_read_from_environment(monkeypatch):
+    monkeypatch.setenv("LLM_BASE_URL", "http://example:8000/v1")
+    monkeypatch.setenv("LLM_MODEL", "some-model")
+    monkeypatch.setenv("LLM_TEMPERATURE", "0.3")
+
+    s = Settings(_env_file=None)  # ignore any local .env so the test is deterministic
+
+    assert s.llm_base_url == "http://example:8000/v1"
+    assert s.llm_model == "some-model"
+    assert s.llm_temperature == 0.3
+
+
+def test_missing_required_setting_fails_fast(monkeypatch):
+    monkeypatch.delenv("LLM_BASE_URL", raising=False)
+    monkeypatch.delenv("LLM_MODEL", raising=False)
+
+    with pytest.raises(ValidationError):
+        Settings(_env_file=None)
+
+
+def test_api_key_is_not_leaked_when_printed():
+    s = Settings(_env_file=None, llm_base_url="x", llm_model="y", llm_api_key="secret-123")
+
+    assert "secret-123" not in repr(s)
+    assert s.llm_api_key.get_secret_value() == "secret-123"

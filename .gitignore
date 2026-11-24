@@ -1,0 +1,28 @@
+# Python
+__pycache__/
+*.py[cod]
+.venv/
+.pytest_cache/
+.ruff_cache/
+*.egg-info/
+
+# Secrets
+.env
+
+# Data: raw PDFs, processed chunks and indexes never go into git.
+# Only data/SOURCES.md is tracked.
+data/*
+!data/SOURCES.md
+
+# Model files and caches
+models/
+*.gguf
+*.safetensors
+
+# Eval/benchmark scratch output (final results go to docs/benchmarks/)
+eval/runs/
+
+# OS / editor
+.DS_Store
+.vscode/
+.idea/

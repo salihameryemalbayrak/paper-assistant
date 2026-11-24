@@ -1,0 +1,29 @@
+[project]
+name = "paper-assistant"
+version = "0.1.0"
+description = "Turkish question answering over open-access AI papers with cited sources (hybrid search, reranking, eval)."
+readme = "README.md"
+requires-python = ">=3.11"
+# Versions are intentionally unpinned here; exact versions are locked in uv.lock.
+dependencies = [
+    "langchain-openai",
+    "pydantic-settings",
+]
+
+[dependency-groups]
+dev = [
+    "pytest",
+    "ruff",
+]
+
+[tool.ruff]
+line-length = 100
+target-version = "py311"
+
+[tool.ruff.lint]
+# E/F: pycodestyle + pyflakes, I: import sorting, UP: modern syntax, B: common bugs
+select = ["E", "F", "I", "UP", "B"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+pythonpath = ["."]
