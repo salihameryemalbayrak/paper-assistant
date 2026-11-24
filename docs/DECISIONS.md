@@ -170,14 +170,14 @@ Her karar için:
 - **Tablo altyazılarının ayrı kopyası:** Docling tablo Markdown'ının başına altyazıyı zaten ekliyor; ayrı altyazı öğesi de tutulsaydı 71 altyazının 48'i iki kez indekslenecekti. Şekil altyazıları ayrı öğe olarak kalıyor (şeklin altyazıdan başka metni yok).
 
 ### D20. Chunking kuralları
-- **Boyut:** Hedef ~300, üst sınır 400 token (yaklaşık: kelime × 1,3). multilingual-e5-small en fazla 512 token okuyor; 400 tahmin hatasına pay bırakıyor. Aşama 4'te gerçek tokenizer ile doğrulanacak; 200 ve 500 gibi alternatifler eval ile denenecek.
+- **Boyut:** Hedef ~300, üst sınır 400 **gerçek token** (embedding modelinin tokenizer'ı ile sayılıyor, bkz. D24). Modeller en fazla 512 token okuyor; aradaki pay önek (`passage: `), "başlık > bölüm" satırı ve özel token'lar için. 200 ve 500 gibi alternatifler eval ile denenecek.
   - Ölçülen veri (5 makale): paragraf ortancası 44 kelime (birleştirmek gerekiyor), en büyük tablo 738 kelime (bölmek gerekiyor).
 - **Çok küçük ve çok büyük chunk'ın sorunları:** Küçük chunk bağlamı kaybeder ("it outperforms BM25": "it" kim?). Büyük chunk'ın embedding'i birçok konunun ortalaması olur ve hiçbirine net benzemez; LLM'e de alakasız metin gider ("lost in the middle").
 - **Sınırlar:** Bir chunk tek bir bölümden ve tek bir sayfadan **başlar**. Paragraflar bölünmez; 400 token'ı aşan paragraf cümle sınırlarından bölünür (LangChain `RecursiveCharacterTextSplitter`, `keep_separator="end"`).
 - **Tablolar:** Tek chunk. 400'ü aşarsa satır gruplarına bölünür ve her parçaya altyazı ile başlık satırı tekrar eklenir. Aksi halde `| tr | 45.8 | … | 75.6 |` satırındaki sayıların hangi sütuna ait olduğu bilinemez.
 - **Contextual chunk header:** Arama metni (`search_text`) "makale başlığı > bölüm" ile başlıyor; LLM'e ve kullanıcıya giden `text` orijinal kalıyor. Örnek: e5 s.3'teki "we end up with ∼270M text pairs" paragrafında "E5" ya da "CCPairs" geçmiyor; başlık eklenmeden BM25 bu paragrafı bulamaz.
 - **Örtüşme:** Yok, çünkü metin paragraf sınırlarından kesiliyor. Yalnızca uzun bir paragraf bölünürken 30 token örtüşme var.
-- **Sonuç:** 362 chunk (260 metin, 74 tablo parçası, 28 şekil). Ortanca ~180 token, 400'ü aşan yok.
+- **Sonuç (gerçek tokenizer ile):** 469 chunk (297 metin, 142 tablo parçası, 30 şekil). Ortanca 227 token. 22 tablo parçası 400'ü aşıyor (en çok 457): bunlar tek bir satırı bile ~250–330 token olan geniş tablolar. Altyazı + başlık + tek satır bölünemiyor; hepsi 512'nin altında kaldığı için kabul edildi.
 
 ### D21. Kapsama kontrolü: chunking cevapları kaybetti mi?
 - **Kontrol:** Cevabı olan 16 eval sorusunun her biri için, cevabın anahtar ifadesi beklenen sayfayı kapsayan bir chunk'ta var mı? Bu, aramanın ulaşabileceği üst sınır: chunking'de kaybolan bir cevabı hiçbir arama bulamaz.
@@ -187,3 +187,26 @@ Her karar için:
 - **Son sonuç: 16/16.**
 - **Ders:** Arama kurmadan önce "cevap indekste var mı?" diye bakmak, arama hatası ile veri hazırlama hatasını birbirinden ayırıyor.
 - **Açık iyileştirme:** Büyük şekiller (Self-RAG Şekil 1) bölünürken parçalara altyazı tekrar eklenmiyor; eval sonucuna göre karar verilecek.
+
+### D22. Vektör veritabanı: Qdrant sunucusu (Docker)
+- **Karar:** Qdrant ayrı bir sunucu olarak Docker'da çalışıyor (`infra/docker-compose.yml`). Veri `data/qdrant/` klasöründe (git'e girmez); konteyner silinse de indeks kalır. Portlar yalnızca `127.0.0.1`'e açık.
+- **Alternatifler:**
+  - Qdrant'ın gömülü modu (`QdrantClient(path=...)`): Docker gerektirmez, ama gerçek kullanımdaki istemci–sunucu yapısını göstermez ve web paneli yok. Testlerde kullanılabilir.
+  - Chroma, FAISS: FAISS bir kütüphane, veritabanı değil (payload/filtre yok). Chroma da yaygın; Qdrant'ı filtreleme, hibrit (dense + sparse) arama desteği ve panelden ötürü seçtim.
+- **Sürüm tuzağı:** `langchain-qdrant` 1.2.0, `qdrant-client<1.16` istiyor. İstemci, sunucuyla en fazla bir minor sürüm fark olduğunda uyumluluğu garanti ediyor. Bu yüzden Docker imajı en güncel 1.20 değil, istemciye uyan **v1.15.5**. LangChain entegrasyonu güncellenince ikisi birlikte yükseltilir.
+- **Kavramlar:** *Embedding* metni anlamını temsil eden bir vektöre çevirir; *kosinüs benzerliği* iki vektörün yönüne bakar. Qdrant en yakın vektörleri tek tek karşılaştırarak değil, **HNSW** graf indeksiyle bulur (yaklaşık en yakın komşu). Her vektörün yanında bir *payload* (chunk metni, makale, sayfa, bölüm) saklanır.
+- **Model başına bir koleksiyon:** e5-small 384, bge-m3 1024 boyutlu vektör üretiyor; aynı koleksiyonda karışamazlar.
+
+### D23. Linux'ta yalnızca CPU'luk PyTorch
+- **Sorun:** sentence-transformers PyTorch gerektiriyor ve artık ana bağımlılık (sorgu anında da embedding lazım). Linux'ta PyPI'daki torch, birkaç GB CUDA kütüphanesiyle geliyor; CI ve Docker imajları bunu her seferinde indirecekti.
+- **Karar:** `pyproject.toml`'da `[tool.uv.sources]` ile torch, **yalnızca Linux'ta** PyTorch'un CPU deposundan (`download.pytorch.org/whl/cpu`) kuruluyor. macOS PyPI sürümünü kullanmaya devam ediyor (Apple Silicon'da GPU'yu MPS ile zaten kullanabiliyor). `uv.lock` iki sürümü de platform işaretiyle tutuyor (`2.15.0` ve `2.15.0+cpu`).
+- **Ayrıntı:** uv'de `sources` yalnızca doğrudan bağımlılıklara uygulanıyor; bu yüzden `torch` listeye açıkça eklendi. `explicit = true`, bu depodan yalnızca torch'un alınmasını sağlıyor.
+- **Windows (RTX 3050 Ti):** Orada GPU'lu torch istenirse ayrı bir işaretle eklenebilir. Şimdilik gerek yok, embedding modelleri CPU'da da yeterince hızlı.
+
+### D24. Token sayımı: tahmin değil gerçek tokenizer
+- **Bulgu:** İlk indekslemede `ingest/index.py`'nin kontrolü, 362 chunk'tan **29'unun modelin 512 token sınırını aştığını** gösterdi. sentence-transformers uzun metni **hata vermeden keser**: tablonun alt satırları embedding'e hiç girmiyor, aramada görünmez oluyordu.
+- **Neden:** Chunking "kelime × 1,3" tahminiyle yapılmıştı. Gerçek/tahmin oranı (ortanca): metin 1,32 (tahmin doğru), şekil 1,56, **tablo 1,77**. Tablolar sayı ve sembol dolu: "0.71" bir kelime ama üç token (`0`, `.`, `71`); `|` ayrı token. Docling'in tablo hizalama boşlukları ise suçlu değildi: temizlemek yalnızca %2 kazandırıyordu (ölçüldü).
+- **Karar:** Chunking, embedding modelinin tokenizer'ı ile sayıyor (`tokenizer_counter`). Sayma fonksiyonu `chunk_paper`'a parametre olarak veriliyor; testler tokenizer indirmeden kelime tahminiyle çalışıyor.
+- **Model bağımlılığı:** multilingual-e5-small ve bge-m3 aynı XLM-RoBERTa tokenizer'ını kullanıyor (aynı metinde birebir aynı token'lar, doğrulandı). Bu yüzden model seçimi chunk'ları değiştirmiyor.
+- **Güvenlik ağı:** `ingest/index.py` her çalıştırmada önek dahil gerçek uzunluğu ölçüp sınırı aşan chunk sayısını yazdırıyor. Düzeltmeden sonra: **0** (en uzun 491).
+- **Ders:** Sessiz hatalar en tehlikelisi; varsayımlar (1,3 oranı) veri türüne göre ölçülmeli.

@@ -29,3 +29,12 @@ def test_api_key_is_not_leaked_when_printed():
 
     assert "secret-123" not in repr(s)
     assert s.llm_api_key.get_secret_value() == "secret-123"
+
+
+def test_retrieval_settings_have_defaults_and_can_be_overridden(monkeypatch):
+    monkeypatch.setenv("EMBEDDING_MODEL", "BAAI/bge-m3")
+
+    s = Settings(_env_file=None, llm_base_url="x", llm_model="y")
+
+    assert s.qdrant_url == "http://localhost:6333"
+    assert s.embedding_model == "BAAI/bge-m3"

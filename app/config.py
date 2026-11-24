@@ -21,6 +21,12 @@ class Settings(BaseSettings):
     llm_temperature: float = 0.0
     llm_timeout_s: float = 120.0
 
+    # Vector database (Qdrant server, see infra/docker-compose.yml).
+    qdrant_url: str = "http://localhost:6333"
+    # Hugging Face model id for sentence-transformers. Changing it needs a re-index:
+    # each model gets its own Qdrant collection (vector sizes differ between models).
+    embedding_model: str = "intfloat/multilingual-e5-small"
+
 
 @lru_cache
 def get_settings() -> Settings:

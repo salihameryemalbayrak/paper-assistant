@@ -150,7 +150,8 @@ Repo iskeleti oluştukça doldurulacak:
 | Veri indirme | `uv run python -m ingest.download` |
 | PDF ayrıştırma (Docling) | `uv run python -m ingest.parse` (`--force` ile yeniden) |
 | Chunking | `uv run python -m ingest.chunk` → `data/chunks.jsonl` |
-| İndeksleme | _(Aşama 4)_ |
+| Qdrant başlatma / durdurma | `docker compose -f infra/docker-compose.yml up -d qdrant` / `... down` |
+| İndeksleme (Qdrant) | `uv run python -m ingest.index` (`--model BAAI/bge-m3` ile başka model) |
 | Soru sorma (CLI) | _(Aşama 4)_ |
 | Hızlı eval | _(Aşama 2/5)_ |
 | Tam eval | _(Aşama 7)_ |

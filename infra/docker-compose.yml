@@ -1,0 +1,21 @@
+# Local services. Phase 4 only needs Qdrant; Ollama/vLLM/Langfuse profiles come in Phase 8.
+#
+# Start:  docker compose -f infra/docker-compose.yml up -d qdrant
+# Stop:   docker compose -f infra/docker-compose.yml down
+# UI:     http://localhost:6333/dashboard
+
+services:
+  qdrant:
+    # Pinned version (multi-arch: arm64 + amd64). Matches the qdrant-client minor version in
+    # uv.lock (langchain-qdrant 1.2.0 requires qdrant-client <1.16); the client only guarantees
+    # compatibility with servers at most one minor version apart.
+    image: qdrant/qdrant:v1.15.5
+    ports:
+      # Bound to 127.0.0.1: reachable from this machine only, not from the local network.
+      - "127.0.0.1:6333:6333" # HTTP API + web dashboard
+      - "127.0.0.1:6334:6334" # gRPC API
+    volumes:
+      # Paths are relative to this file: the index lives in data/qdrant/ (git-ignored)
+      # and survives container restarts and removals.
+      - ../data/qdrant:/qdrant/storage
+    restart: unless-stopped

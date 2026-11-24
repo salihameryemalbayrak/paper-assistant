@@ -1,9 +1,20 @@
 import re
 
-from ingest.chunk import MAX_TOKENS, TARGET_TOKENS, chunk_paper, estimate_tokens, split_table
+from ingest.chunk import MAX_TOKENS, TARGET_TOKENS, estimate_tokens
+from ingest.chunk import chunk_paper as _chunk_paper
+from ingest.chunk import split_table as _split_table
 from ingest.elements import Element, ElementType
 
 TITLE = "A Paper"
+
+
+# The tests count tokens with the word-based estimate so they need no tokenizer download.
+def chunk_paper(elements: list[Element], title: str):
+    return _chunk_paper(elements, title, estimate_tokens)
+
+
+def split_table(markdown: str) -> list[str]:
+    return _split_table(markdown, estimate_tokens)
 
 
 def el(
@@ -132,3 +143,13 @@ def test_figure_element_becomes_figure_chunk():
     text = "Figure 1: Overview.\n\n[Figure text] Retriever | No Retrieval"
     chunks = chunk_paper([el("figure", text)], TITLE)
     assert [(c.type, c.text) for c in chunks] == [("figure", text)]
+
+
+def test_token_counter_drives_the_sizes():
+    """A table that fits by word count is split when the counter says it is too long."""
+    table = "Table 1: x\n\n| a | b |\n|---|---|\n" + "\n".join(
+        f"| {i} | 0.{i} |" for i in range(40)
+    )
+    assert _split_table(table, estimate_tokens) == [table]
+    pieces = _split_table(table, lambda text: 4 * len(text.split()))  # numbers: more tokens
+    assert len(pieces) > 1

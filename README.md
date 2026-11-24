@@ -25,7 +25,7 @@ The focus is on retrieval rather than on model size. The goal is good answers fr
 
 ## Quickstart
 
-Prerequisites: [uv](https://docs.astral.sh/uv/) and [Ollama](https://ollama.com/).
+Prerequisites: [uv](https://docs.astral.sh/uv/), [Ollama](https://ollama.com/) and Docker (for Qdrant).
 
 ```bash
 # 1. Install dependencies into a local virtual environment (.venv)
@@ -49,6 +49,12 @@ uv run python -m ingest.parse
 
 # 7. Split parsed elements into retrieval chunks (data/chunks.jsonl)
 uv run python -m ingest.chunk
+
+# 8. Start the Qdrant vector database (dashboard: http://localhost:6333/dashboard)
+docker compose -f infra/docker-compose.yml up -d qdrant
+
+# 9. Embed the chunks and write them to Qdrant (first run downloads the embedding model)
+uv run python -m ingest.index
 ```
 
 The model server is configured only through environment variables (`LLM_BASE_URL`, `LLM_MODEL`, `LLM_API_KEY`). To switch to vLLM or another provider, edit `.env`; no code changes are needed.
