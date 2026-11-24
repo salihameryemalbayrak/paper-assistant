@@ -9,7 +9,7 @@ import json
 from enum import StrEnum
 from pathlib import Path
 
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, model_validator
 
 PARSED_DIR = Path("data/parsed")
 
@@ -18,15 +18,24 @@ class ElementType(StrEnum):
     HEADING = "heading"
     TEXT = "text"
     TABLE = "table"  # text is a Markdown table
-    CAPTION = "caption"  # figure or table caption
+    CAPTION = "caption"  # a caption not attached to a table or figure
+    FIGURE = "figure"  # figure caption + text found inside the figure
 
 
 class Element(BaseModel):
     paper: str  # short_name from data/SOURCES.md
-    page: int = Field(ge=1)  # physical PDF page, 1-based
+    page: int = Field(ge=1)  # first physical PDF page, 1-based
+    # every page the element appears on: a paragraph can continue on the next page
+    pages: list[int] = []
     section: str  # nearest preceding section heading, "" before the first one
     type: ElementType
     text: str
+
+    @model_validator(mode="after")
+    def _default_pages(self) -> "Element":
+        if not self.pages:
+            self.pages = [self.page]
+        return self
 
 
 def save_elements(elements: list[Element], path: Path) -> None:

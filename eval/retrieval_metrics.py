@@ -1,32 +1,36 @@
 """Retrieval metrics: Recall@k and MRR, written by hand (no library).
 
-A retrieved hit is relevant if its (paper, page) matches one of the expected
-sources of the question. Unanswerable questions have no expected sources and
-are excluded here; they are measured by refusal rate in the full eval.
+Each retrieved hit is the set of (paper, page) pairs one retrieved chunk covers
+(a chunk can span two pages when a paragraph continues on the next page). A hit is
+relevant if it covers one of the expected sources of the question.
+
+Unanswerable questions have no expected sources and are excluded here; they are
+measured by refusal rate in the full eval.
 """
 
-from collections.abc import Callable, Sequence
+from collections.abc import Callable, Collection, Sequence
 from statistics import mean
 
 from eval.dataset import EvalItem, QuestionType, SourceRef
 
+Hit = Collection[SourceRef]  # the (paper, page) pairs one retrieved chunk covers
 # A retriever takes a question and returns hits ranked best-first.
-Retriever = Callable[[str], Sequence[SourceRef]]
+Retriever = Callable[[str], Sequence[Hit]]
 
 
-def recall_at_k(hits: Sequence[SourceRef], expected: Sequence[SourceRef], k: int) -> float:
-    """Fraction of expected sources that appear among the top-k hits."""
+def recall_at_k(hits: Sequence[Hit], expected: Sequence[SourceRef], k: int) -> float:
+    """Fraction of expected sources covered by the top-k hits."""
     if not expected:
         raise ValueError("recall is undefined without expected sources")
-    top_k = set(hits[:k])
-    return sum(source in top_k for source in set(expected)) / len(set(expected))
+    covered = set().union(*hits[:k])
+    return sum(source in covered for source in set(expected)) / len(set(expected))
 
 
-def reciprocal_rank(hits: Sequence[SourceRef], expected: Sequence[SourceRef]) -> float:
+def reciprocal_rank(hits: Sequence[Hit], expected: Sequence[SourceRef]) -> float:
     """1 / rank of the first relevant hit (rank starts at 1); 0 if none is relevant."""
     wanted = set(expected)
     for rank, hit in enumerate(hits, start=1):
-        if hit in wanted:
+        if wanted & set(hit):
             return 1.0 / rank
     return 0.0
 

@@ -27,4 +27,4 @@ jobs:
           uv run --no-sync ruff format --check .
 
       - name: Test
-        run: uv run --no-sync pytest
+        run: uv run --no-sync pytest -rs  # -rs: list skipped tests with reasons

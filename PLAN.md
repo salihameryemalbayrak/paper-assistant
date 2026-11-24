@@ -344,7 +344,7 @@ Türkçe soru ──► TR→EN çeviri ──► BM25(EN) + Dense(TR, EN) ─�
 - [x] Aşama 0 — İskelet
 - [x] Aşama 1 — Veri
 - [x] Aşama 2 — Eval seti
-- [ ] Aşama 3 — Ingest
+- [x] Aşama 3 — Ingest (OCR testi ertelendi: taranmış belge yok)
 - [ ] Aşama 4 — Dense + basit RAG (baseline)
 - [ ] Aşama 5 — Hibrit arama + sorgu çevirisi
 - [ ] Aşama 6 — Reranker

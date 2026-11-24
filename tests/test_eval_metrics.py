@@ -11,8 +11,11 @@ B5 = SourceRef(paper="b", page=5)
 C9 = SourceRef(paper="c", page=9)
 
 
+# Each hit is the set of (paper, page) pairs one retrieved chunk covers.
+
+
 def test_recall_at_k():
-    hits = [C9, A1, A2]
+    hits = [{C9}, {A1}, {A2}]
     assert recall_at_k(hits, [A1], k=1) == 0.0
     assert recall_at_k(hits, [A1], k=2) == 1.0
     # comparison question with two expected sources, only one found
@@ -20,11 +23,18 @@ def test_recall_at_k():
 
 
 def test_reciprocal_rank():
-    assert reciprocal_rank([A1, C9], [A1]) == 1.0
-    assert reciprocal_rank([C9, C9, A1], [A1]) == pytest.approx(1 / 3)
-    assert reciprocal_rank([C9], [A1]) == 0.0
+    assert reciprocal_rank([{A1}, {C9}], [A1]) == 1.0
+    assert reciprocal_rank([{C9}, {C9}, {A1}], [A1]) == pytest.approx(1 / 3)
+    assert reciprocal_rank([{C9}], [A1]) == 0.0
     # only the FIRST relevant hit counts
-    assert reciprocal_rank([C9, B5, A1], [A1, B5]) == 0.5
+    assert reciprocal_rank([{C9}, {B5}, {A1}], [A1, B5]) == 0.5
+
+
+def test_chunk_spanning_two_pages_matches_either_page():
+    # a paragraph that starts on page 1 and continues on page 2
+    hits = [{C9}, {A1, A2}]
+    assert reciprocal_rank(hits, [A2]) == 0.5
+    assert recall_at_k(hits, [A2], k=2) == 1.0
 
 
 def test_evaluate_with_fake_retriever():
@@ -33,7 +43,7 @@ def test_evaluate_with_fake_retriever():
         EvalItem(id="q2", type="single_page", question="q2", answer="x", sources=[B5]),
         EvalItem(id="q3", type="unanswerable", question="q3", answer="Dokümanda bulamadım."),
     ]
-    fake_results = {"q1": [A1, C9], "q2": [C9, B5], "q3": [C9]}
+    fake_results = {"q1": [{A1}, {C9}], "q2": [{C9}, {B5}], "q3": [{C9}]}
 
     result = evaluate(items, lambda q: fake_results[q], ks=(1, 2))
 

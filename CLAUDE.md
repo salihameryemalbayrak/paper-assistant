@@ -149,6 +149,7 @@ Repo iskeleti oluştukça doldurulacak:
 | Lint + format kontrolü | `uv run ruff check . && uv run ruff format --check .` |
 | Veri indirme | `uv run python -m ingest.download` |
 | PDF ayrıştırma (Docling) | `uv run python -m ingest.parse` (`--force` ile yeniden) |
+| Chunking | `uv run python -m ingest.chunk` → `data/chunks.jsonl` |
 | İndeksleme | _(Aşama 4)_ |
 | Soru sorma (CLI) | _(Aşama 4)_ |
 | Hızlı eval | _(Aşama 2/5)_ |

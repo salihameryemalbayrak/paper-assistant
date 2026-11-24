@@ -47,3 +47,8 @@ def test_table_captions_are_not_duplicated(ragas_elements):
     tables = [e.text for e in ragas_elements if e.type == "table"]
     captions = [e.text for e in ragas_elements if e.type == "caption"]
     assert not [c for c in captions if any(c in t for t in tables)]
+
+
+def test_paragraph_continuing_on_next_page_keeps_both_pages(ragas_elements):
+    paragraph = next(e for e in ragas_elements if "three quality aspects" in e.text)
+    assert paragraph.pages == [2, 3]

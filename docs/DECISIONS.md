@@ -168,3 +168,22 @@ Her karar için:
 - **Sayfa üst/alt bilgileri** (her sayfada tekrar eden "Preprint.", arXiv damgası): aramada gürültü.
 - **Kaynakça (References):** "BERT: Pre-training of…" gibi satırlar birçok soruya alakalı görünür ama hiçbirini cevaplamaz. Kaynakçadan sonra gelen **ekler tutuluyor** (QLoRA ve Self-RAG'in önemli tabloları orada).
 - **Tablo altyazılarının ayrı kopyası:** Docling tablo Markdown'ının başına altyazıyı zaten ekliyor; ayrı altyazı öğesi de tutulsaydı 71 altyazının 48'i iki kez indekslenecekti. Şekil altyazıları ayrı öğe olarak kalıyor (şeklin altyazıdan başka metni yok).
+
+### D20. Chunking kuralları
+- **Boyut:** Hedef ~300, üst sınır 400 token (yaklaşık: kelime × 1,3). multilingual-e5-small en fazla 512 token okuyor; 400 tahmin hatasına pay bırakıyor. Aşama 4'te gerçek tokenizer ile doğrulanacak; 200 ve 500 gibi alternatifler eval ile denenecek.
+  - Ölçülen veri (5 makale): paragraf ortancası 44 kelime (birleştirmek gerekiyor), en büyük tablo 738 kelime (bölmek gerekiyor).
+- **Çok küçük ve çok büyük chunk'ın sorunları:** Küçük chunk bağlamı kaybeder ("it outperforms BM25": "it" kim?). Büyük chunk'ın embedding'i birçok konunun ortalaması olur ve hiçbirine net benzemez; LLM'e de alakasız metin gider ("lost in the middle").
+- **Sınırlar:** Bir chunk tek bir bölümden ve tek bir sayfadan **başlar**. Paragraflar bölünmez; 400 token'ı aşan paragraf cümle sınırlarından bölünür (LangChain `RecursiveCharacterTextSplitter`, `keep_separator="end"`).
+- **Tablolar:** Tek chunk. 400'ü aşarsa satır gruplarına bölünür ve her parçaya altyazı ile başlık satırı tekrar eklenir. Aksi halde `| tr | 45.8 | … | 75.6 |` satırındaki sayıların hangi sütuna ait olduğu bilinemez.
+- **Contextual chunk header:** Arama metni (`search_text`) "makale başlığı > bölüm" ile başlıyor; LLM'e ve kullanıcıya giden `text` orijinal kalıyor. Örnek: e5 s.3'teki "we end up with ∼270M text pairs" paragrafında "E5" ya da "CCPairs" geçmiyor; başlık eklenmeden BM25 bu paragrafı bulamaz.
+- **Örtüşme:** Yok, çünkü metin paragraf sınırlarından kesiliyor. Yalnızca uzun bir paragraf bölünürken 30 token örtüşme var.
+- **Sonuç:** 362 chunk (260 metin, 74 tablo parçası, 28 şekil). Ortanca ~180 token, 400'ü aşan yok.
+
+### D21. Kapsama kontrolü: chunking cevapları kaybetti mi?
+- **Kontrol:** Cevabı olan 16 eval sorusunun her biri için, cevabın anahtar ifadesi beklenen sayfayı kapsayan bir chunk'ta var mı? Bu, aramanın ulaşabileceği üst sınır: chunking'de kaybolan bir cevabı hiçbir arama bulamaz.
+- **İlk sonuç: 12/16.** İki sebep vardı:
+  1. **Sayfa sonunda bölünen paragraflar (q01, q16):** Docling bir paragrafın konumunu birden fazla sayfa olarak (`[2, 3]`) veriyor; biz yalnızca ilkini kullanıyorduk. Düzeltme: Öğeler ve chunk'lar `pages` listesi taşıyor; eval'de bir chunk, beklenen sayfa bu listedeyse isabet sayılıyor. Kaynak da `s.2–3` gibi gösterilebilecek.
+  2. **Şeklin içindeki yazılar (q11, q12):** Şekiller atlanıp yalnızca altyazı tutuluyordu; "summer vacation" Self-RAG Şekil 1'in içinde yazıyor. Düzeltme: Docling'in `traverse_pictures=True` ayarıyla şeklin içindeki metinler okunuyor; her şekil "altyazı + [Figure text] …" olarak tek öğe oluyor. VLM gerektirmeyen, ücretsiz bir ara çözüm.
+- **Son sonuç: 16/16.**
+- **Ders:** Arama kurmadan önce "cevap indekste var mı?" diye bakmak, arama hatası ile veri hazırlama hatasını birbirinden ayırıyor.
+- **Açık iyileştirme:** Büyük şekiller (Self-RAG Şekil 1) bölünürken parçalara altyazı tekrar eklenmiyor; eval sonucuna göre karar verilecek.

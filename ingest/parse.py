@@ -11,7 +11,7 @@ import argparse
 import time
 
 from docling.document_converter import DocumentConverter
-from docling_core.types.doc import DocItemLabel, DoclingDocument, TableItem
+from docling_core.types.doc import DocItemLabel, DoclingDocument, PictureItem, TableItem
 
 from app.text import normalize_text
 from ingest.download import RAW_DIR
@@ -22,7 +22,6 @@ HEADING_LABELS = {DocItemLabel.TITLE, DocItemLabel.SECTION_HEADER}
 SKIPPED_LABELS = {
     DocItemLabel.PAGE_HEADER,
     DocItemLabel.PAGE_FOOTER,
-    DocItemLabel.PICTURE,  # the image itself; its caption is kept as a CAPTION element
     DocItemLabel.DOCUMENT_INDEX,
 }
 # Bibliography entries look relevant to many queries ("BERT: Pre-training of ...") but
@@ -34,19 +33,34 @@ def _is_skipped_section(heading: str) -> bool:
     return heading.strip().lower() in SKIPPED_SECTIONS
 
 
+def figure_text(picture: PictureItem, doc: DoclingDocument) -> str:
+    """Caption plus the text labels found inside the figure (e.g. boxes in a diagram)."""
+    caption = picture.caption_text(doc)
+    inner = [
+        normalize_text(child.text)
+        for child, _level in doc.iterate_items(root=picture, traverse_pictures=True)
+        if child is not picture and getattr(child, "text", "").strip()
+    ]
+    if not inner:
+        return caption
+    return f"{caption}\n\n[Figure text] " + " | ".join(inner)
+
+
 def document_to_elements(doc: DoclingDocument, paper: str) -> list[Element]:
     elements: list[Element] = []
     section = ""
-    # A table's Markdown export already starts with its caption; keeping the caption
-    # as a separate element too would index the same text twice.
-    table_caption_refs = {ref.cref for table in doc.tables for ref in table.captions}
+    # Table and figure captions are already included in the table/figure element;
+    # keeping them as separate elements too would index the same text twice.
+    attached_captions = {ref.cref for item in [*doc.tables, *doc.pictures] for ref in item.captions}
+    # iterate_items does not descend into pictures here; figure_text() reads them.
     for item, _level in doc.iterate_items():
         label = getattr(item, "label", None)
         if label in SKIPPED_LABELS or not getattr(item, "prov", None):
             continue
-        if item.self_ref in table_caption_refs:
+        if item.self_ref in attached_captions:
             continue
         page = item.prov[0].page_no
+        pages = sorted({p.page_no for p in item.prov})
 
         if label in HEADING_LABELS:
             section = normalize_text(item.text)
@@ -55,6 +69,7 @@ def document_to_elements(doc: DoclingDocument, paper: str) -> list[Element]:
                     Element(
                         paper=paper,
                         page=page,
+                        pages=pages,
                         section=section,
                         type=ElementType.HEADING,
                         text=section,
@@ -67,6 +82,9 @@ def document_to_elements(doc: DoclingDocument, paper: str) -> list[Element]:
         if isinstance(item, TableItem):
             element_type = ElementType.TABLE
             text = item.export_to_markdown(doc=doc)
+        elif isinstance(item, PictureItem):
+            element_type = ElementType.FIGURE
+            text = figure_text(item, doc)
         elif label == DocItemLabel.CAPTION:
             element_type = ElementType.CAPTION
             text = item.text
@@ -77,7 +95,14 @@ def document_to_elements(doc: DoclingDocument, paper: str) -> list[Element]:
         text = normalize_text(text)
         if text:
             elements.append(
-                Element(paper=paper, page=page, section=section, type=element_type, text=text)
+                Element(
+                    paper=paper,
+                    page=page,
+                    pages=pages,
+                    section=section,
+                    type=element_type,
+                    text=text,
+                )
             )
     return elements
 

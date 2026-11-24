@@ -968,6 +968,18 @@ wheels = [
 ]
 
 [[package]]
+name = "langchain-text-splitters"
+version = "1.2.0"
+source = { registry = "https://pypi.org/simple" }
+dependencies = [
+    { name = "langchain-core" },
+]
+sdist = { url = "https://files.pythonhosted.org/packages/90/52/bf954839dd1ed651caaca7bd3f8e855d9cf86adf9e9a3b3d5805c6e1298d/langchain_text_splitters-1.2.0.tar.gz", hash = "sha256:b1910bc42bc4b708411f0df009b7f1b6fdcc96e52f0847f6a5a5c70deec4b91f", size = 270318, upload-time = "2026-11-23T16:11:27.511Z" }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/42/fa/fe89d3109248e51890bd7839ee24576728b4aed7deb61a9f7afe57d7f381/langchain_text_splitters-1.2.0-py3-none-any.whl", hash = "sha256:be4e5b288ee7cd5c20c47f540cb359732cb2c83980ce4bab34120f63d1e40f76", size = 38211, upload-time = "2026-11-23T16:11:26.483Z" },
+]
+
+[[package]]
 name = "langcodes"
 version = "3.5.1"
 source = { registry = "https://pypi.org/simple" }
@@ -1926,6 +1938,7 @@ source = { virtual = "." }
 default-groups = ["dev", "ingest"]
 dependencies = [
     { name = "langchain-openai" },
+    { name = "langchain-text-splitters" },
     { name = "pydantic-settings" },
 ]
 
@@ -1941,6 +1954,7 @@ ingest = [
 [package.metadata]
 requires-dist = [
     { name = "langchain-openai" },
+    { name = "langchain-text-splitters", specifier = ">=1.2.0" },
     { name = "pydantic-settings" },
 ]
 
