@@ -27,6 +27,7 @@ from statistics import median
 from langchain_core.documents import Document
 
 from app.ask import CONTEXT_K, build_chain, check_citations, extract_citations, is_refusal
+from app.bm25 import load_bm25_retriever
 from app.config import get_settings
 from app.llm import get_chat_model
 from app.vectorstore import collection_name, get_vectorstore
@@ -62,9 +63,21 @@ def _hardware() -> str:
     return f"{platform.processor() or platform.machine()}, {platform.system()}"
 
 
-def run_fast(model: str) -> dict:
+RETRIEVERS = ("dense", "bm25")
+
+
+def build_retriever(name: str, model: str):
+    """Every retriever has the same LangChain interface: invoke(question) -> list[Document]."""
+    if name == "dense":
+        return get_vectorstore(model).as_retriever(search_kwargs={"k": TOP_K})
+    if name == "bm25":
+        return load_bm25_retriever(k=TOP_K)
+    raise ValueError(f"unknown retriever: {name}")
+
+
+def run_fast(model: str, retriever_name: str = "dense") -> dict:
     items = load_dataset(DATASET)
-    retriever = get_vectorstore(model).as_retriever(search_kwargs={"k": TOP_K})
+    retriever = build_retriever(retriever_name, model)
 
     retriever.invoke("warm-up")  # first call loads the model; keep it out of the timings
     cache: dict[str, list[Hit]] = {}
@@ -97,9 +110,10 @@ def run_fast(model: str) -> dict:
         "date": datetime.now().isoformat(timespec="seconds"),
         "git_commit": _git_commit(),
         "hardware": _hardware(),
-        "embedding_model": model,
-        "collection": collection_name(model),
-        "retrieval": f"dense only, Turkish query (no translation), top_k={TOP_K}",
+        "run_name": f"dense_{collection_name(model)}" if retriever_name == "dense" else "bm25",
+        "retriever": retriever_name,
+        "embedding_model": model if retriever_name == "dense" else None,
+        "retrieval": f"{retriever_name} only, Turkish query (no translation), top_k={TOP_K}",
         "dataset": {"file": str(DATASET), "answerable": len(per_question), "total": len(items)},
         "latency_ms_median": round(median(latencies_ms), 1),
         "metrics": metrics,
@@ -167,7 +181,7 @@ def run_answers(model: str) -> dict:
 
 
 def print_summary(result: dict) -> None:
-    print(f"\n{result['embedding_model']} | {result['retrieval']} | {result['hardware']}")
+    print(f"\n{result['run_name']} | {result['retrieval']} | {result['hardware']}")
     columns = ["n", *(f"recall@{k}" for k in KS), "mrr"]
     print(f"{'group':<12}" + "".join(f"{c:>10}" for c in columns))
     for group, values in result["metrics"].items():
@@ -183,6 +197,9 @@ def main() -> None:
     mode.add_argument("--fast", action="store_true", help="retrieval metrics only, no LLM")
     mode.add_argument("--answers", action="store_true", help="answer every question with the LLM")
     parser.add_argument("--model", help="embedding model id (default: EMBEDDING_MODEL)")
+    parser.add_argument(
+        "--retriever", choices=RETRIEVERS, default="dense", help="for --fast (default: dense)"
+    )
     args = parser.parse_args()
 
     model = args.model or get_settings().embedding_model
@@ -199,11 +216,11 @@ def main() -> None:
         print(f"saved -> {out}")
         return
 
-    result = run_fast(model)
+    result = run_fast(model, args.retriever)
     print_summary(result)
 
     RESULTS_DIR.mkdir(parents=True, exist_ok=True)
-    out = RESULTS_DIR / f"{result['date'][:10]}_{result['collection']}.json"
+    out = RESULTS_DIR / f"{result['date'][:10]}_{result['run_name']}.json"
     out.write_text(json.dumps(result, indent=2, ensure_ascii=False) + "\n", encoding="utf-8")
     print(f"saved -> {out}")
 

@@ -267,3 +267,32 @@ Her karar için:
 - **Ders: sayfa düzeyindeki Recall iyimser.** Eval sayfa düzeyinde tanımlı (D12): aynı sayfadaki herhangi bir chunk isabet sayılıyor. Tablo ile onu anlatan paragraf aynı sayfada olduğunda metrik "buldu" diyor, model ise cevabı göremiyor. Sayfa düzeyi yine doğru seçim (chunking değişince eval seti bozulmuyor), ama yorumlanırken bu sınır bilinmeli. Olası ek ölçüt: cevabın anahtar ifadesini içeren chunk'ın getirilip getirilmediği (D21'deki kapsama kontrolünün arama versiyonu).
 - **Sonraki aşamaların hedefi:** Tablo ve şekil chunk'ları birebir kelime eşleşmesiyle bulunur ("Table 2", "PopQA", "Recall@100", "Figure 1"). Bu, BM25 ve İngilizce sorgu çevirisinin (Aşama 5) tam olarak çözmesi beklenen sorun. Aynı 20 soru ile yeniden ölçülecek.
 - **Gözlem:** q12'de cevap doğru ama kaynak olarak beklenen Şekil 1 (s.1) yerine s.9'daki "Ethics Consideration" paragrafı gösterildi. Etiket bağlamda var (uydurma değil), ama asıl kaynak değil. Faithfulness bunu ölçmez; kaynak doğruluğu Aşama 7'de ayrıca ele alınacak.
+
+### D29. BM25: kendi retriever sınıfımız, birleştirme için EnsembleRetriever
+- **Karar:** BM25 için `app/bm25.py` içinde kendi `BM25Retriever` sınıfımız (LangChain `BaseRetriever` arayüzü, puanlama `rank-bm25`). Sonuç listelerinin RRF ile birleştirilmesi LangChain'in `EnsembleRetriever`'ı ile (Aşama 5c).
+- **Neden hazır BM25Retriever değil:** `langchain-community` paketinde; paket "sunset" (bakımı bırakılıyor) uyarısı veriyor. Ayrıca varsayılan kelime ayırıcısı `text.split()`: "BM25," ile "bm25" farklı kelime sayılıyor.
+- **EnsembleRetriever ne yapar, ne yapmaz:** Kendisi arama yapmaz; verilen retriever'ların listelerini toplar, her chunk'a `ağırlık / (60 + sıra)` puanı verip toplar, aynı chunk'ı `id_key` ile tekilleştirir. BM25 retriever'ına ihtiyaç duyar; onun yerine geçmez. Retriever'ları sırayla çalıştırır ve hepsine aynı girdiyi verir (kaynak kodundan doğrulandı).
+- **Kelime ayırıcı:** küçük harf; `recall@100`, `55.8`, `bge-m3` tek parça; noktalama atılır; scikit-learn'ün İngilizce stopword listesi. Kök bulma (stemming) yok, ayrıca denenebilir.
+  - Stopword'ler neden şart: makale metinlerinde "what/does/how" nadir geçtiği için idf'leri yüksek (3–4) çıkıyordu ve BM25'i alakasız paragraflara yönlendiriyordu. Çıkarınca deneme sorgusunda q09'un cevap chunk'ı 48. sıradan 11.'ye çıktı.
+  - Türkçe tuzak: Küçük harfe çevirme İngilizce kuralla yapılıyor (`turkish_lower` "IDF"yi "ıdf" yapardı). Ama Python `"İ".lower()` sonucu `i` + birleşik nokta (U+0307) veriyor ve kelimeyi bölüyor; bu yüzden önce `İ → i` dönüşümü yapılıyor. Testle sabitlendi.
+- **BM25 formülü (rank-bm25, k1=1,5, b=0,75):** `Σ idf(w) · f·(k1+1) / (f + k1·(1 − b + b·|D|/ort_uzunluk))`, `idf = ln((N − n + 0,5)/(n + 0,5))`. k1 doygunluk (aynı kelimenin tekrarı az ödüllendirilir), b uzunluk düzeltmesi.
+  - Okapi sınırı: Chunk'ların yarısından fazlasında geçen kelimenin idf'si ≤ 0. Böyle kelimeler tek başına eşleşme sağlamaz; çok küçük derlemlerde (testler) beklenmedik boş sonuç verir.
+  - Puanı 0 olan chunk döndürülmüyor: dense her zaman k sonuç verir, BM25 vermemeli; yoksa RRF alakasız chunk'lara sıra puanı dağıtır.
+- **İndeks:** Bellekte, başlangıçta `data/chunks.jsonl`'dan kuruluyor (469 chunk, milisaniyeler). Dense ile aynı `search_text` indeksleniyor; aynı chunk iki listede aynı `chunk_id`'yi taşıyor.
+- **Alternatif: Qdrant'ın kendi hibrit araması** (fastembed `Qdrant/bm25` seyrek vektörleri + sunucu tarafında RRF). Ölçeklenme yolu bu (milyonlarca belge, kalıcı indeks). İncelenen tuzaklar:
+  1. `langchain-qdrant` koleksiyonu `modifier=IDF` olmadan kuruyor: IDF'siz kelime sayımı olur, sessizce kötü sonuç verir.
+  2. Hibrit mod dense ve seyrek aramaya aynı sorguyu veriyor; bizim TR/EN tasarımı için `qdrant-client` ile özel sorgu yazmak gerekir.
+  3. fastembed kelime ayırıcısı `55.8`'i `55` ve `8`, `Recall@100`'ü `recal` ve `100` diye bölüyor (kök bulma ise var).
+
+### D30. BM25'in Türkçe sorguyla ilk ölçümü: dense ile birbirini tamamlıyor
+- **Ölçüm:** `uv run python -m eval.run --fast --retriever bm25`. Çeviri yok, Türkçe sorgu. Apple M4.
+
+| Retriever | Recall@1 | Recall@5 | Recall@10 | MRR | Gecikme |
+|---|---|---|---|---|---|
+| dense (e5-small) | 0,375 | 0,594 | 0,750 | 0,509 | 22 ms |
+| BM25 | 0,375 | 0,562 | 0,750 | 0,485 | 0,4 ms |
+
+- **Beklenmeyen sonuç:** Türkçe sorgu İngilizce metinde BM25 ile hiç eşleşmez sanılıyordu. Eşleşiyor, çünkü sorular İngilizce terimlerle dolu: "Ragas", "Self-RAG", "PopQA", "MKQA", "M3-Embedding", "faithfulness", "QLoRA". Bunlar tam BM25'in güçlü olduğu nadir, özel kelimeler.
+- **Birbirini tamamlama:** Dense'in ilk 10'da bulamadığı q01, q12, q13'ü BM25 4., 1., 1. sırada buluyor; BM25'in bulamadığı q05, q11, q15'i dense 2., 6., 9. sırada buluyor. İkisinden en az biri **16/16** soruyu ilk 10'da buluyor. RRF ile birleştirme (5c) için güçlü bir gerekçe.
+  - BM25'in kaçırdıkları terimsiz, tamamen Türkçe anlatımlı sorular (q05: "sorgu ile pasajı ayırt etmek için hangi önek"; q11: "yaz tatili" örneği). Dense'in kaçırdıkları ise özel ad/şekil numarası içerenler.
+- **Eval seti uyarısı:** Sorulardaki İngilizce terim yoğunluğu BM25'i kolaylaştırıyor olabilir. Gerçek kullanıcılar da yapay zekâ konularında İngilizce terim kullanıyor, ama eval seti genişletilirken (Aşama 7) terimsiz, doğal Türkçe sorular da eklenmeli. Çevirinin (5b) katkısı en çok bu tür sorularda görülmeli.
