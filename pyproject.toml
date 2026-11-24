@@ -15,6 +15,9 @@ dev = [
     "pytest",
     "ruff",
 ]
+ingest = [
+    "docling>=2.152.0",
+]
 
 [tool.ruff]
 line-length = 100
@@ -27,3 +30,8 @@ select = ["E", "F", "I", "UP", "B"]
 [tool.pytest.ini_options]
 testpaths = ["tests"]
 pythonpath = ["."]
+
+[tool.uv]
+# The "ingest" group (Docling + PyTorch) is installed locally by default.
+# CI skips it with --no-group ingest because PyTorch on Linux pulls several GB of GPU libraries.
+default-groups = ["dev", "ingest"]

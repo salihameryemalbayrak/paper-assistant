@@ -43,6 +43,9 @@ uv run python -m app.llm "Merhaba, kendini tanıtır mısın?"
 
 # 5. Download the papers listed in data/SOURCES.md (licenses are re-checked)
 uv run python -m ingest.download
+
+# 6. Parse PDFs with Docling into data/parsed/ (first run downloads layout models)
+uv run python -m ingest.parse
 ```
 
 The model server is configured only through environment variables (`LLM_BASE_URL`, `LLM_MODEL`, `LLM_API_KEY`). To switch to vLLM or another provider, edit `.env`; no code changes are needed.
@@ -58,7 +61,7 @@ uv run ruff check . && uv run ruff format --check .  # lint + format check
 
 ```
 app/        # configuration, LLM client, text utilities (retrieval and API to come)
-ingest/     # data pipeline: download (PDF parsing and chunking to come)
+ingest/     # data pipeline: download, parse (Docling); chunking to come
 eval/       # hand-verified eval set (dataset.jsonl) and retrieval metrics (Recall@k, MRR)
 data/       # SOURCES.md only; downloaded PDFs stay local
 tests/      # pytest suite

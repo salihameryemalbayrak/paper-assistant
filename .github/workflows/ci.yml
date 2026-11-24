@@ -16,14 +16,15 @@ jobs:
           curl -LsSf https://astral.sh/uv/install.sh | sh
           echo "$HOME/.local/bin" >> "$GITHUB_PATH"
 
-      # --locked fails if uv.lock is out of date with pyproject.toml
+      # --locked fails if uv.lock is out of date with pyproject.toml.
+      # --no-group ingest skips Docling + PyTorch (several GB on Linux); ingest tests are skipped.
       - name: Install dependencies
-        run: uv sync --locked
+        run: uv sync --locked --no-group ingest
 
       - name: Lint
         run: |
-          uv run ruff check .
-          uv run ruff format --check .
+          uv run --no-sync ruff check .
+          uv run --no-sync ruff format --check .
 
       - name: Test
-        run: uv run pytest
+        run: uv run --no-sync pytest

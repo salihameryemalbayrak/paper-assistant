@@ -126,3 +126,45 @@ Her karar için:
   - q20'de cevap modelin ezberinde var (bge-m3 vektör boyutu, model kartında) ama makalede yok. Ayrıca "1024" makalede başka bir anlamda (girdi uzunluğu) geçiyor.
   - Sistem bu sorularda "Dokümanda bulamadım" demeli; doğru bir rakam bile söylese kaynaksız cevap hata sayılıyor.
 - **Ders:** "Dokümanda yok" kontrolünü ilk kez metin aramasıyla yaptım ve arama aracı "1024"ü sessizce kaçırdı. Elle doğrulama bu hatayı yakaladı. "Yok" iddiası, "var" iddiasından daha zor doğrulanıyor.
+
+---
+
+## Aşama 3 — Ingest
+
+### D16. PDF ayrıştırıcı: Docling (PyMuPDF değil)
+- **Karar:** Docling 2.152. Ölçüm: `docs/benchmarks/parser_comparison.md` (MacBook Air M4, 5 makale, 99 sayfa).
+- **Ölçümler:**
+
+  | | PyMuPDF 2.1 | Docling 2.152 |
+  |---|---|---|
+  | Süre (99 sayfa) | ~12 sn | ~72 sn |
+  | Beklenen 5 başlık | 4/5 | 5/5 |
+  | Eval'deki 4 tablo satırı | 0/4 | 4/4 |
+  | Altyazı tanıma | yok | var |
+  | OCR | ayrıca Tesseract gerekir | dahili |
+  | Lisans | AGPL-3.0 | MIT |
+
+- **Neden:**
+  - PyMuPDF tabloları buluyor ama içeriğini bozuyor: satırları birleştiriyor, `55.8`'i `558` ve ayrı bir `.` olarak okuyor. Tablo soruları bu çıktıyla cevaplanamaz.
+  - PyMuPDF'te başlıklar PDF'in yer imlerinden geliyor; yer imi olmayan Ragas'ta 0 başlık çıktı. Docling başlıkları sayfa düzeninden tanıyor.
+  - Docling'in yavaşlığı tek seferlik bir maliyet (ingest bir kez yapılıyor).
+- **Bedel:** PyTorch ile ~1 GB kurulum ve model önbelleği.
+- **Mülakatta:** "İki ayrıştırıcıyı eval setimin dayandığı tablo satırları üzerinde ölçtüm. PyMuPDF dört tablonun hiçbirini doğru çıkaramadı, ondalık noktaları kaybetti. Docling 6 kat yavaş ama dördünü de doğru çıkardı. Ingest tek seferlik olduğu için doğruluğu seçtim."
+- **Ölçüm sırasında yakalanan hata:** İlk çalıştırmada Docling'in q08'i de kaçırdığı görünüyordu. Hata benim kontrol kuralımdaydı ("13B" tek başına bir hücre olmalı sanıyordu; hücre "Our SELF-RAG 13B" idi). Ölçüm kodunu da test etmek gerekiyor.
+
+### D17. Ingest'i iki adıma ayırmak: parse ve chunk
+- **Karar:** `ingest/parse.py` (Docling) PDF'i bizim basit öğe formatımıza (`ingest/elements.py`) çevirip `data/parsed/<makale>.jsonl` olarak kaydediyor. Chunking ayrı bir adım olacak ve bu dosyaları okuyacak.
+- **Neden:**
+  - Chunk ayarlarını defalarca değiştireceğiz. Parse ~70 sn sürüyor, chunking ise bir saniyeden kısa. Parse sonucu bir kez kaydedilip chunking istenildiği kadar yeniden çalıştırılabiliyor.
+  - Chunking kodu Docling'e bağlı değil; testleri Docling olmadan çalışıyor.
+  - Docling ileride değiştirilirse yalnızca parse adımı etkilenir.
+
+### D18. Bağımlılık grubu: `ingest`
+- **Karar:** Docling ayrı bir `ingest` grubunda. Yerelde varsayılan olarak kuruluyor (`[tool.uv] default-groups`); CI'da atlanıyor (`uv sync --no-group ingest` ve `uv run --no-sync`).
+- **Neden:** Linux'ta PyTorch, GPU kütüphaneleriyle birlikte birkaç GB indiriyor; her push'ta bunu beklemek CI'ı yavaşlatırdı. Docling gerektiren testler `pytest.importorskip` ile CI'da atlanıyor.
+- **Tuzak:** `uv run` çalışmadan önce ortamı varsayılan gruplara göre senkronize ediyor; CI'da `--no-sync` olmasaydı Docling yine kurulacaktı.
+
+### D19. Parse sırasında atılan içerik
+- **Sayfa üst/alt bilgileri** (her sayfada tekrar eden "Preprint.", arXiv damgası): aramada gürültü.
+- **Kaynakça (References):** "BERT: Pre-training of…" gibi satırlar birçok soruya alakalı görünür ama hiçbirini cevaplamaz. Kaynakçadan sonra gelen **ekler tutuluyor** (QLoRA ve Self-RAG'in önemli tabloları orada).
+- **Tablo altyazılarının ayrı kopyası:** Docling tablo Markdown'ının başına altyazıyı zaten ekliyor; ayrı altyazı öğesi de tutulsaydı 71 altyazının 48'i iki kez indekslenecekti. Şekil altyazıları ayrı öğe olarak kalıyor (şeklin altyazıdan başka metni yok).

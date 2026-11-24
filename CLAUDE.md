@@ -148,7 +148,8 @@ Repo iskeleti oluştukça doldurulacak:
 | Testler | `uv run pytest` |
 | Lint + format kontrolü | `uv run ruff check . && uv run ruff format --check .` |
 | Veri indirme | `uv run python -m ingest.download` |
-| İndeksleme | _(Aşama 3)_ |
+| PDF ayrıştırma (Docling) | `uv run python -m ingest.parse` (`--force` ile yeniden) |
+| İndeksleme | _(Aşama 4)_ |
 | Soru sorma (CLI) | _(Aşama 4)_ |
 | Hızlı eval | _(Aşama 2/5)_ |
 | Tam eval | _(Aşama 7)_ |
