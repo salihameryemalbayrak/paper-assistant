@@ -71,7 +71,9 @@ def format_docs(docs: Sequence[Document]) -> str:
 
 
 def _normalize_label(label: str) -> str:
-    return re.sub(r"\s+", " ", label.replace("-", "–")).strip()
+    """Collapse whitespace; write page ranges with an en dash (s.2-3 -> s.2–3)."""
+    label = re.sub(r"(s\.\s?\d+)\s?-\s?(\d+)", r"\1–\2", label)
+    return re.sub(r"\s+", " ", label).strip()
 
 
 def extract_citations(answer: str) -> list[str]:
@@ -88,8 +90,13 @@ def check_citations(answer: str, docs: Sequence[Document]) -> list[str]:
     return [label for label in extract_citations(answer) if label not in given]
 
 
-def is_refusal(answer: str) -> bool:
-    return NOT_FOUND in answer
+def answer_kind(answer: str) -> str:
+    """ "refusal": only the fixed sentence; "partial": content plus the sentence
+    (the model answered part of the question); "answer": no refusal sentence."""
+    if NOT_FOUND not in answer:
+        return "answer"
+    rest = answer.replace(NOT_FOUND, "").strip(" \n.")
+    return "partial" if rest else "refusal"
 
 
 def build_chain(retriever: Runnable, llm: BaseChatModel) -> Runnable:
@@ -104,14 +111,14 @@ def build_chain(retriever: Runnable, llm: BaseChatModel) -> Runnable:
 def main() -> None:
     from app.config import get_settings
     from app.llm import get_chat_model
-    from app.vectorstore import get_vectorstore
+    from app.retrieval import build_retriever
 
     question = " ".join(sys.argv[1:]).strip()
     if not question:
         sys.exit('usage: uv run python -m app.ask "soru"')
 
     settings = get_settings()
-    retriever = get_vectorstore().as_retriever(search_kwargs={"k": CONTEXT_K})
+    retriever = build_retriever(settings.retriever, CONTEXT_K)
     chain = build_chain(retriever, get_chat_model(settings))
 
     start = time.perf_counter()
@@ -124,7 +131,8 @@ def main() -> None:
         print(f"  {citation_label(doc.metadata)} {doc.metadata['chunk_id']}")
     if unknown := check_citations(result["answer"], result["docs"]):
         print(f"\nUYARI: bağlamda olmayan kaynak etiketi: {unknown}")
-    print(f"\n[{settings.llm_model} | {settings.embedding_model} | {elapsed:.1f} sn]")
+    models = f"{settings.llm_model} | {settings.retriever} | {settings.embedding_model}"
+    print(f"\n[{models} | {elapsed:.1f} sn]")
 
 
 if __name__ == "__main__":

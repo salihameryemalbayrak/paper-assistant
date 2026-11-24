@@ -296,3 +296,32 @@ Her karar için:
 - **Birbirini tamamlama:** Dense'in ilk 10'da bulamadığı q01, q12, q13'ü BM25 4., 1., 1. sırada buluyor; BM25'in bulamadığı q05, q11, q15'i dense 2., 6., 9. sırada buluyor. İkisinden en az biri **16/16** soruyu ilk 10'da buluyor. RRF ile birleştirme (5c) için güçlü bir gerekçe.
   - BM25'in kaçırdıkları terimsiz, tamamen Türkçe anlatımlı sorular (q05: "sorgu ile pasajı ayırt etmek için hangi önek"; q11: "yaz tatili" örneği). Dense'in kaçırdıkları ise özel ad/şekil numarası içerenler.
 - **Eval seti uyarısı:** Sorulardaki İngilizce terim yoğunluğu BM25'i kolaylaştırıyor olabilir. Gerçek kullanıcılar da yapay zekâ konularında İngilizce terim kullanıyor, ama eval seti genişletilirken (Aşama 7) terimsiz, doğal Türkçe sorular da eklenmeli. Çevirinin (5b) katkısı en çok bu tür sorularda görülmeli.
+
+### D31. Hibrit arama (dense + BM25, RRF): ilk ölçüm
+- **Kurulum:** `app/retrieval.py`. `EnsembleRetriever(retrievers=[dense, bm25], weights=[0.5, 0.5], c=60, id_key="chunk_id")`; iki listenin her biri k sonuç getiriyor, birleşik liste ilk k'ya kısaltılıyor. Retriever `.env`'den seçiliyor: `RETRIEVER=dense|bm25|hybrid`.
+- **RRF örneği:** İki listede de 2. olan chunk: `0,5/62 + 0,5/62 = 0,0161`. Yalnızca bir listede 1. olan: `0,5/61 = 0,0082`. RRF **uzlaşmayı** ödüllendiriyor: iki yöntemin birlikte beğendiği chunk, tek bir yöntemin şampiyonunu geçiyor.
+- **Hızlı eval (Türkçe sorgu, çeviri yok, Apple M4):**
+
+| Retriever | Recall@1 | Recall@3 | Recall@5 | Recall@10 | MRR |
+|---|---|---|---|---|---|
+| dense | 0,375 | 0,531 | 0,594 | 0,750 | **0,509** |
+| BM25 | 0,375 | 0,500 | 0,562 | 0,750 | 0,485 |
+| hybrid | 0,375 | 0,469 | **0,625** | **0,812** | 0,487 |
+
+- **Cevap eval (qwen3:4b-instruct, bağlamda 5 chunk):**
+
+| | dense | hybrid |
+|---|---|---|
+| Doğru reddetme | 4/4 | 4/4 |
+| Tam cevap (16 cevaplanabilir soru) | 10 | 9 |
+| Kısmi cevap (içerik + "bulamadım") | 0 | 2 (q14, q16) |
+| Reddetme | 6 | 5 |
+| Geçersiz kaynak etiketi | 0 | 1 (q14: model `bge_m3` yerine `bge_m-3` yazdı) |
+
+- **Yorum:** Hibrit, ilk 10'da daha çok doğru sayfa getiriyor (Recall@10 +0,06), ama ilk 5'te fark küçük ve cevap kalitesine yansımıyor. RRF uzlaşmayı ödüllendirdiği için yalnızca bir yöntemin bulduğu chunk'lar (q11: yalnızca dense, 6. sıra) geriye düşüyor; "ikisinden biri 16/16 buluyor" üst sınırına ulaşılamıyor.
+- **Karar:** Varsayılan retriever şimdilik **dense** kalıyor (ölçülmüş bir iyileşme yok). Hibritin asıl değeri reranker ile birlikte bekleniyor (Aşama 6): reranker ilk 10–20 adayı yeniden sıralar, bu yüzden aday havuzunun genişliği (Recall@10/20) önemli; hibrit tam bunu artırıyor.
+- **Ölçümde düzeltilen iki hata:**
+  1. "Reddetme" sayımı, cevabın içinde "Dokümanda bulamadım." geçmesine bakıyordu. Model bazen önce kısmi cevap verip sonuna bu cümleyi ekliyor; bunlar reddetme sayılıyordu. Artık üç tür var: `answer`, `partial`, `refusal`. Kayıtlı iki sonucun özeti, LLM yeniden çalıştırılmadan saklanan cevaplardan yeniden hesaplandı.
+  2. Kaynak etiketi düzeltme fonksiyonu her tireyi uzun tireye çeviriyordu (`bge_m-3` → `bge_m–3`); artık yalnızca sayfa aralıklarına uygulanıyor.
+  3. (Süreç) `--answers` sonuç dosyasının adında retriever yoktu; hibrit sonuç dense sonucunun üstüne yazıldı. Dense sonuç git'ten geri alındı, dosya adına retriever eklendi.
+- **Görülen model hatası (sayımların yakalamadığı):** Karşılaştırma sorularında 4B model iki makalenin bilgilerini karıştırıyor (q14: M3'ün [CLS] yöntemini E5'e; q16: QLoRA bulgularını Ragas'a mal ediyor). Etiket geçerli, iddia yanlış. Bunu RAGAS faithfulness ölçümü yakalamalı (Aşama 7); daha büyük model karşılaştırması Aşama 9.

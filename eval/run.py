@@ -26,11 +26,11 @@ from statistics import median
 
 from langchain_core.documents import Document
 
-from app.ask import CONTEXT_K, build_chain, check_citations, extract_citations, is_refusal
-from app.bm25 import load_bm25_retriever
+from app.ask import CONTEXT_K, answer_kind, build_chain, check_citations, extract_citations
 from app.config import get_settings
 from app.llm import get_chat_model
-from app.vectorstore import collection_name, get_vectorstore
+from app.retrieval import RETRIEVERS, build_retriever
+from app.vectorstore import collection_name
 from eval.dataset import QuestionType, SourceRef, load_dataset
 from eval.retrieval_metrics import Hit, evaluate, reciprocal_rank
 
@@ -63,21 +63,9 @@ def _hardware() -> str:
     return f"{platform.processor() or platform.machine()}, {platform.system()}"
 
 
-RETRIEVERS = ("dense", "bm25")
-
-
-def build_retriever(name: str, model: str):
-    """Every retriever has the same LangChain interface: invoke(question) -> list[Document]."""
-    if name == "dense":
-        return get_vectorstore(model).as_retriever(search_kwargs={"k": TOP_K})
-    if name == "bm25":
-        return load_bm25_retriever(k=TOP_K)
-    raise ValueError(f"unknown retriever: {name}")
-
-
 def run_fast(model: str, retriever_name: str = "dense") -> dict:
     items = load_dataset(DATASET)
-    retriever = build_retriever(retriever_name, model)
+    retriever = build_retriever(retriever_name, TOP_K, model)
 
     retriever.invoke("warm-up")  # first call loads the model; keep it out of the timings
     cache: dict[str, list[Hit]] = {}
@@ -110,10 +98,12 @@ def run_fast(model: str, retriever_name: str = "dense") -> dict:
         "date": datetime.now().isoformat(timespec="seconds"),
         "git_commit": _git_commit(),
         "hardware": _hardware(),
-        "run_name": f"dense_{collection_name(model)}" if retriever_name == "dense" else "bm25",
+        "run_name": retriever_name
+        if retriever_name == "bm25"
+        else f"{retriever_name}_{collection_name(model)}",
         "retriever": retriever_name,
-        "embedding_model": model if retriever_name == "dense" else None,
-        "retrieval": f"{retriever_name} only, Turkish query (no translation), top_k={TOP_K}",
+        "embedding_model": None if retriever_name == "bm25" else model,
+        "retrieval": f"{retriever_name}, Turkish query (no translation), top_k={TOP_K}",
         "dataset": {"file": str(DATASET), "answerable": len(per_question), "total": len(items)},
         "latency_ms_median": round(median(latencies_ms), 1),
         "metrics": metrics,
@@ -121,10 +111,35 @@ def run_fast(model: str, retriever_name: str = "dense") -> dict:
     }
 
 
+def summarize_answers(rows: list[dict]) -> dict:
+    """Automatic checks over the answers (no judge LLM; RAGAS comes in Phase 7)."""
+    answerable = [r for r in rows if r["type"] != QuestionType.UNANSWERABLE]
+    unanswerable = [r for r in rows if r["type"] == QuestionType.UNANSWERABLE]
+
+    def ids(rows_: list[dict], kind: str) -> list[str]:
+        return [r["id"] for r in rows_ if r["kind"] == kind]
+
+    refused = ids(answerable, "refusal")
+    return {
+        "correct_refusals": f"{len(ids(unanswerable, 'refusal'))}/{len(unanswerable)}",
+        "answerable_answered": f"{len(ids(answerable, 'answer'))}/{len(answerable)}",
+        "answerable_partial": ids(answerable, "partial"),
+        "answerable_refused": refused,
+        "refused_although_source_page_in_context": [
+            r["id"] for r in answerable if r["id"] in refused and r["context_has_source"]
+        ],
+        "answers_without_citation": [
+            r["id"] for r in rows if r["kind"] != "refusal" and not r["citations"]
+        ],
+        "answers_with_invented_citation": [r["id"] for r in rows if r["invented_citations"]],
+        "seconds_median": round(median(r["seconds"] for r in rows), 1),
+    }
+
+
 def run_answers(model: str) -> dict:
     settings = get_settings()
     items = load_dataset(DATASET)
-    retriever = get_vectorstore(model).as_retriever(search_kwargs={"k": CONTEXT_K})
+    retriever = build_retriever(settings.retriever, CONTEXT_K, model)
     chain = build_chain(retriever, get_chat_model(settings))
     chain.invoke("warm-up")  # loads the embedding model and the LLM
 
@@ -143,7 +158,7 @@ def run_answers(model: str) -> dict:
                 "question": item.question,
                 "expected": item.answer,
                 "answer": answer,
-                "refused": is_refusal(answer),
+                "kind": answer_kind(answer),  # answer | partial | refusal
                 # did the context contain an expected page? (retrieval succeeded)
                 "context_has_source": answerable and reciprocal_rank(hits, item.sources) > 0,
                 "citations": extract_citations(answer),
@@ -153,19 +168,6 @@ def run_answers(model: str) -> dict:
             }
         )
 
-    answerable = [r for r in rows if r["type"] != QuestionType.UNANSWERABLE]
-    unanswerable = [r for r in rows if r["type"] == QuestionType.UNANSWERABLE]
-    answered = [r for r in answerable if not r["refused"]]
-    summary = {
-        "correct_refusals": f"{sum(r['refused'] for r in unanswerable)}/{len(unanswerable)}",
-        "false_refusals": f"{len(answerable) - len(answered)}/{len(answerable)}",
-        "false_refusals_with_source_in_context": [
-            r["id"] for r in answerable if r["refused"] and r["context_has_source"]
-        ],
-        "answers_without_citation": [r["id"] for r in answered if not r["citations"]],
-        "answers_with_invented_citation": [r["id"] for r in rows if r["invented_citations"]],
-        "seconds_median": round(median(r["seconds"] for r in rows), 1),
-    }
     return {
         "mode": "answers",
         "date": datetime.now().isoformat(timespec="seconds"),
@@ -174,8 +176,9 @@ def run_answers(model: str) -> dict:
         "llm": f"{settings.llm_model} @ {settings.llm_base_url}",
         "llm_temperature": settings.llm_temperature,
         "embedding_model": model,
-        "retrieval": f"dense only, Turkish query (no translation), context_k={CONTEXT_K}",
-        "summary": summary,
+        "retriever": settings.retriever,
+        "retrieval": f"{settings.retriever}, Turkish query (no translation), context_k={CONTEXT_K}",
+        "summary": summarize_answers(rows),
         "per_question": rows,
     }
 
@@ -206,12 +209,12 @@ def main() -> None:
     if args.answers:
         result = run_answers(model)
         for row in result["per_question"]:
-            flags = " REFUSED" * row["refused"] + " INVENTED" * bool(row["invented_citations"])
+            flags = f" {row['kind'].upper()}" + " INVENTED" * bool(row["invented_citations"])
             print(f"\n{row['id']} ({row['type']}, {row['seconds']}s){flags}\n{row['answer']}")
         print("\n" + json.dumps(result["summary"], indent=2, ensure_ascii=False))
         ANSWERS_DIR.mkdir(parents=True, exist_ok=True)
         slug = re.sub(r"[^a-z0-9]+", "_", get_settings().llm_model.lower()).strip("_")
-        out = ANSWERS_DIR / f"{result['date'][:10]}_{slug}.json"
+        out = ANSWERS_DIR / f"{result['date'][:10]}_{result['retriever']}_{slug}.json"
         out.write_text(json.dumps(result, indent=2, ensure_ascii=False) + "\n", encoding="utf-8")
         print(f"saved -> {out}")
         return

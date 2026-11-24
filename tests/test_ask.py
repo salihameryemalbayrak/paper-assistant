@@ -7,12 +7,12 @@ from langchain_core.runnables import RunnableLambda
 from app.ask import (
     NOT_FOUND,
     PROMPT,
+    answer_kind,
     build_chain,
     check_citations,
     citation_label,
     extract_citations,
     format_docs,
-    is_refusal,
 )
 
 
@@ -70,7 +70,13 @@ def test_chain_returns_docs_question_and_answer():
     }
 
 
-def test_refusal_is_detected_inside_a_longer_answer():
-    assert is_refusal("Dokümanda bulamadım.")
-    assert is_refusal("Üzgünüm. Dokümanda bulamadım.")
-    assert not is_refusal("Ragas üç boyutu ölçer [ragas, s.3, §3].")
+def test_answer_kind_separates_refusal_partial_and_answer():
+    assert answer_kind("Dokümanda bulamadım.") == "refusal"
+    assert answer_kind("  Dokümanda bulamadım.\n") == "refusal"
+    assert answer_kind("E5 ortalama alır [e5, s.4, §4].\n\nDokümanda bulamadım.") == "partial"
+    assert answer_kind("Ragas üç boyutu ölçer [ragas, s.3, §3].") == "answer"
+
+
+def test_label_normalization_only_touches_page_ranges():
+    assert extract_citations("x [bge_m3, s.2-3, §2]") == ["[bge_m3, s.2–3, §2]"]
+    assert extract_citations("x [bge_m-3, s.4, §3.2]") == ["[bge_m-3, s.4, §3.2]"]

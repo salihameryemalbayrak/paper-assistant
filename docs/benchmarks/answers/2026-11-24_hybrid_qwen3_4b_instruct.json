@@ -1,0 +1,444 @@
+{
+  "mode": "answers",
+  "date": "2026-11-24T23:27:09",
+  "git_commit": "15037c3-dirty",
+  "hardware": "Apple M4, macOS 26.6.2",
+  "llm": "qwen3:4b-instruct @ http://localhost:11434/v1",
+  "llm_temperature": 0.0,
+  "embedding_model": "intfloat/multilingual-e5-small",
+  "retriever": "hybrid",
+  "retrieval": "hybrid, Turkish query (no translation), context_k=5",
+  "summary": {
+    "correct_refusals": "4/4",
+    "answerable_answered": "9/16",
+    "answerable_partial": [
+      "q14",
+      "q16"
+    ],
+    "answerable_refused": [
+      "q04",
+      "q08",
+      "q09",
+      "q11",
+      "q15"
+    ],
+    "refused_although_source_page_in_context": [
+      "q08",
+      "q09"
+    ],
+    "answers_without_citation": [],
+    "answers_with_invented_citation": [
+      "q14"
+    ],
+    "seconds_median": 5.6
+  },
+  "per_question": [
+    {
+      "id": "q01",
+      "type": "single_page",
+      "question": "Ragas çerçevesi bir RAG sistemini hangi üç kalite boyutunda değerlendirir?",
+      "expected": "Faithfulness (cevabın verilen bağlama dayanması), answer relevance (cevabın sorulan soruyu karşılaması) ve context relevance (getirilen bağlamın odaklı olması, gereksiz bilgi içermemesi).",
+      "answer": "Ragas çerçevesi bir RAG sistemini aşağıdaki üç kalite boyutunda değerlendirir:  \n1. Faithfulness (cevabın alındığı bağlamda yer alması)  \n2. Answer Relevance (cevabın soruya cevap vermesi)  \n3. Context Relevance (alınan bağlamın odaklanmaları ve gereksiz bilgi içermemesi) [ragas, s.5, §6].",
+      "context_has_source": true,
+      "citations": [
+        "[ragas, s.5, §6]"
+      ],
+      "invented_citations": [],
+      "context": [
+        "ragas-0001",
+        "ragas-0005",
+        "ragas-0023",
+        "ragas-0004",
+        "ragas-0011"
+      ],
+      "seconds": 6.6,
+      "kind": "answer"
+    },
+    {
+      "id": "q02",
+      "type": "single_page",
+      "question": "Self-RAG'de critic modelinin eğitim verisi nasıl toplandı?",
+      "expected": "GPT-4'e her yansıma (reflection) token türü için ayrı bir talimat ve birkaç örnekle sorularak token tahminleri üretildi; tür başına 4k–20k örnek toplandı ve bu bilgi kurum içi critic modeline (C) damıtıldı. Elle kontrolde GPT-4 tahminlerinin insan değerlendirmesiyle yüksek uyum gösterdiği görüldü.",
+      "answer": "Critic modelinin eğitim verisi, yansıma tokenlarının manuel olarak her segment için etiketlenmesi maliyetli olduğu için (Wu et al., 2023), GPT-4 gibi bir son derece gelişmiş LLM kullanılarak toplandı [self_rag, s.4–5, §3.2.1].",
+      "context_has_source": true,
+      "citations": [
+        "[self_rag, s.4–5, §3.2.1]"
+      ],
+      "invented_citations": [],
+      "context": [
+        "self_rag-0025",
+        "self_rag-0019",
+        "self_rag-0020",
+        "self_rag-0021",
+        "self_rag-0003"
+      ],
+      "seconds": 4.4,
+      "kind": "answer"
+    },
+    {
+      "id": "q03",
+      "type": "single_page",
+      "question": "M3-Embedding'in sparse (seyrek) arama yöntemi diller arası (cross-lingual) aramada neden zayıf kalıyor?",
+      "expected": "Sorgu ve pasaj farklı dillerde olduğu için ortak geçen terim çok az. Sparse yöntem terim eşleşmesine dayandığından BM25'ten iyi olsa da diğer yöntemlerin gerisinde kalıyor.",
+      "answer": "M3-Embedding'in sparse arama yöntemi diller arası aramada zayıf kalmasının nedeni, sorgu ve metin farklı dillerde olduğunda sadece çok sınırlı birlikte var olan terimlerin (co-existed terms) olmasıdır [bge_m3, s.7, §4.2].",
+      "context_has_source": true,
+      "citations": [
+        "[bge_m3, s.7, §4.2]"
+      ],
+      "invented_citations": [],
+      "context": [
+        "bge_m3-0054",
+        "bge_m3-0005",
+        "bge_m3-0053",
+        "bge_m3-0052",
+        "bge_m3-0063"
+      ],
+      "seconds": 6.1,
+      "kind": "answer"
+    },
+    {
+      "id": "q04",
+      "type": "single_page",
+      "question": "E5'i eğitmek için kullanılan CCPairs veri setinde filtrelemeden önce ve sonra kaç metin çifti var?",
+      "expected": "İlk filtrelemeden sonra yaklaşık 1,3 milyar çift; tutarlılık tabanlı filtreden (consistency-based filter) sonra yaklaşık 270 milyon çift.",
+      "answer": "Dokümanda bulamadım.",
+      "context_has_source": false,
+      "citations": [],
+      "invented_citations": [],
+      "context": [
+        "e5-0001",
+        "e5-0004",
+        "e5-0040",
+        "e5-0065",
+        "e5-0050"
+      ],
+      "seconds": 4.7,
+      "kind": "refusal"
+    },
+    {
+      "id": "q05",
+      "type": "single_page",
+      "question": "E5 modeli sorgu ile pasajı birbirinden ayırt etmek için girdilere hangi önekleri ekler?",
+      "expected": "Sorgulara \"query:\", pasajlara \"passage:\" öneki eklenir. Tüm metinler için aynı kodlayıcı (encoder) kullanıldığından bu asimetrik tasarım önemlidir.",
+      "answer": "E5 modeli, sorgu ile pasajı birbirinden ayırt etmek için girdilere \"query:\" ve \"passage:\" öneklerini ekler. [e5, s.4, §4.1]",
+      "context_has_source": true,
+      "citations": [
+        "[e5, s.4, §4.1]"
+      ],
+      "invented_citations": [],
+      "context": [
+        "e5-0001",
+        "e5-0050",
+        "e5-0016",
+        "e5-0065",
+        "e5-0005"
+      ],
+      "seconds": 4.6,
+      "kind": "answer"
+    },
+    {
+      "id": "q06",
+      "type": "single_page",
+      "question": "QLoRA'nın performanstan ödün vermeden bellek tasarrufu sağlayan üç yeniliği nedir?",
+      "expected": "4-bit NormalFloat (NF4) veri tipi, Double Quantization (niceleme sabitlerinin de nicelenmesi) ve bellek sıçramalarını yöneten Paged Optimizers.",
+      "answer": "QLoRA'nın performanstan ödün vermeden bellek tasarrufu sağlayan üç yeniliği şunlardır: (1) 4-bit NormalFloat (NF4), (2) Double Quantization, ve (3) Paged Optimizers [qlora, s.2, §1].",
+      "context_has_source": true,
+      "citations": [
+        "[qlora, s.2, §1]"
+      ],
+      "invented_citations": [],
+      "context": [
+        "qlora-0034",
+        "qlora-0006",
+        "qlora-0023",
+        "qlora-0001",
+        "qlora-0015"
+      ],
+      "seconds": 6.2,
+      "kind": "answer"
+    },
+    {
+      "id": "q07",
+      "type": "table",
+      "question": "Ragas makalesindeki Tablo 1'e göre faithfulness boyutunda Ragas, GPT Score ve GPT Ranking'in insan değerlendirmesiyle uyumu (accuracy) nedir?",
+      "expected": "Ragas 0,95; GPT Score 0,72; GPT Ranking 0,54.",
+      "answer": "Ragas makalesindeki Tablo 1'e göre faithfulness boyutunda Ragas, insan değerlendirmesiyle uyumu (accuracy) 0.95'dir. GPT Score'un uyumu 0.72'dir ve GPT Ranking'in uyumu 0.54'tür. [ragas, s.5, §4]",
+      "context_has_source": true,
+      "citations": [
+        "[ragas, s.5, §4]"
+      ],
+      "invented_citations": [],
+      "context": [
+        "ragas-0019",
+        "ragas-0020",
+        "ragas-0022",
+        "ragas-0021",
+        "qlora-0050"
+      ],
+      "seconds": 5.9,
+      "kind": "answer"
+    },
+    {
+      "id": "q08",
+      "type": "table",
+      "question": "Self-RAG 13B PopQA'da ne kadar doğruluk elde ediyor ve bu, retrieval kullanan ChatGPT (Ret-ChatGPT) ile nasıl karşılaştırılıyor?",
+      "expected": "Self-RAG 13B: 55,8; Ret-ChatGPT: 50,8 (retrieval kullanmayan ChatGPT: 29,3).",
+      "answer": "Dokümanda bulamadım.",
+      "context_has_source": true,
+      "citations": [],
+      "invented_citations": [],
+      "context": [
+        "self_rag-0061",
+        "self_rag-0060",
+        "self_rag-0095",
+        "qlora-0053",
+        "self_rag-0001"
+      ],
+      "seconds": 6.0,
+      "kind": "refusal"
+    },
+    {
+      "id": "q09",
+      "type": "table",
+      "question": "MKQA diller arası arama deneyinde Türkçe sorgular için BM25 ve M3-Embedding (Dense) Recall@100 değerleri nedir?",
+      "expected": "BM25: 45,8; M3 Dense: 75,6. Üç yöntemin birleşimi (All) 76,0.",
+      "answer": "Dokümanda bulamadım.",
+      "context_has_source": true,
+      "citations": [],
+      "invented_citations": [],
+      "context": [
+        "bge_m3-0053",
+        "bge_m3-0052",
+        "bge_m3-0098",
+        "bge_m3-0050",
+        "bge_m3-0094"
+      ],
+      "seconds": 5.7,
+      "kind": "refusal"
+    },
+    {
+      "id": "q10",
+      "type": "table",
+      "question": "QLoRA makalesindeki Tablo 6'ya göre Guanaco 7B ne kadar bellek gerektiriyor ve Vicuna benchmark'ında ChatGPT'ye göre ortalama skoru nedir?",
+      "expected": "4-bit modelde 5 GB bellek; ChatGPT skorunun ortalama %87,0'ı.",
+      "answer": "Guanaco 7B, 5 GB bellek gerektirir ve Vicuna benchmark'ında ChatGPT'ye göre 87.0% ortalama skorunu elde eder. [qlora, s.10, §5.3]",
+      "context_has_source": true,
+      "citations": [
+        "[qlora, s.10, §5.3]"
+      ],
+      "invented_citations": [],
+      "context": [
+        "qlora-0054",
+        "qlora-0049",
+        "qlora-0055",
+        "qlora-0053",
+        "qlora-0052"
+      ],
+      "seconds": 7.5,
+      "kind": "answer"
+    },
+    {
+      "id": "q11",
+      "type": "figure",
+      "question": "Self-RAG genel bakış şeklinde (Şekil 1), 'en iyi yaz tatilin hakkında bir deneme yaz' istemi için model nasıl davranıyor?",
+      "expected": "Retrieval yapmıyor (No Retrieval): görev olgusal bilgi gerektirmediği için doğrudan metin üretiyor. Klasik RAG ise gerekip gerekmediğine bakmadan her zaman sabit sayıda doküman getirir.",
+      "answer": "Dokümanda bulamadım.",
+      "context_has_source": false,
+      "citations": [],
+      "invented_citations": [],
+      "context": [
+        "self_rag-0081",
+        "bge_m3-0080",
+        "self_rag-0030",
+        "bge_m3-0037",
+        "self_rag-0066"
+      ],
+      "seconds": 5.4,
+      "kind": "refusal"
+    },
+    {
+      "id": "q12",
+      "type": "figure",
+      "question": "M3-Embedding'in adındaki üç 'Multi' özelliği nedir (Şekil 1)?",
+      "expected": "Multi-Linguality (100'den fazla dil; çok dilli ve diller arası arama), Multi-Functionality (dense, sparse ve multi-vector arama) ve Multi-Granularity (cümleden 8192 token'a kadar dokümana).",
+      "answer": "M3-Embedding'in adındaki üç 'Multi' özelliği şunlardır: Multi-Lingual, Multi-Vec Retrieval ve Multi-Granularity [bge_m3, s.1, §1].",
+      "context_has_source": true,
+      "citations": [
+        "[bge_m3, s.1, §1]"
+      ],
+      "invented_citations": [],
+      "context": [
+        "bge_m3-0034",
+        "bge_m3-0110",
+        "bge_m3-0005",
+        "bge_m3-0014",
+        "bge_m3-0087"
+      ],
+      "seconds": 5.3,
+      "kind": "answer"
+    },
+    {
+      "id": "q13",
+      "type": "figure",
+      "question": "QLoRA makalesinin Şekil 1'ine göre QLoRA, LoRA'ya kıyasla neyi farklı yapıyor?",
+      "expected": "Transformer modelini 4-bit hassasiyete nicemliyor (quantize) ve bellek sıçramalarını yönetmek için paged optimizer kullanıyor.",
+      "answer": "QLoRA, LoRA'ya kıyasla transformasyon modelini 4-bit hassasiyetine dönüştürme ve bellek çarpmalarını pageable optimizere ile yönetmeyle farklıdır [qlora, s.3, §1].",
+      "context_has_source": true,
+      "citations": [
+        "[qlora, s.3, §1]"
+      ],
+      "invented_citations": [],
+      "context": [
+        "qlora-0034",
+        "qlora-0032",
+        "qlora-0010",
+        "qlora-0050",
+        "qlora-0023"
+      ],
+      "seconds": 4.9,
+      "kind": "answer"
+    },
+    {
+      "id": "q14",
+      "type": "comparison",
+      "question": "E5 ve M3-Embedding, dense arama için metnin tek vektörlük temsilini (embedding) nasıl elde ediyor?",
+      "expected": "E5, Transformer kodlayıcının çıktı katmanında ortalama havuzlama (average pooling) kullanıyor. M3-Embedding ise dense arama için [CLS] token'ının embedding'ini kullanıyor; diğer token'ların embedding'leri sparse ve multi-vector arama için kullanılıyor.",
+      "answer": "E5, metnin tek vektörlük temsilini (embedding) elde etmek için bir metin kodlayıcı ile \"[CLS]\" özel token'ının gizli durumunu (hidden state) kullanır. Bu durumda, sorgu (query) ve metin (passage) için \"[CLS]\" token'ının gizli durumu normalleştirilir ve bu vektörler, dense arama için kullanılır [bge_m3, s.4, §3.2].\n\nM3-Embedding, dense arama için metnin tek vektörlük temsilini (embedding) elde etmek için de benzer bir yaklaşım kullanır. Sorgu ve metin için \"[CLS]\" özel token'ının gizli durumu normalleştirilir ve bu vektörler, sorgu ve metin arasındaki ilişkiyi ölçmek için iç çarpım (inner product) ile kullanılır [bge_m-3, s.4, §3.2].\n\nDokümanda bulamadım.",
+      "context_has_source": false,
+      "citations": [
+        "[bge_m3, s.4, §3.2]",
+        "[bge_m–3, s.4, §3.2]"
+      ],
+      "invented_citations": [
+        "[bge_m-3, s.4, §3.2]"
+      ],
+      "context": [
+        "bge_m3-0018",
+        "bge_m3-0022",
+        "e5-0001",
+        "e5-0050",
+        "bge_m3-0020"
+      ],
+      "seconds": 9.6,
+      "kind": "partial"
+    },
+    {
+      "id": "q15",
+      "type": "comparison",
+      "question": "Ragas'taki faithfulness metriği ile Self-RAG'deki ISSUP token'ı benzer bir şeyi ölçüyor: bu nedir ve ikisi nasıl farklılaşıyor?",
+      "expected": "İkisi de üretilen cevabın kaynak bağlam tarafından desteklenip desteklenmediğini ölçer. Ragas bunu sonradan, harici bir LLM ile cevabı ifadelere bölüp desteklenen ifadelerin oranını (|V|/|S|) hesaplayarak yapar. Self-RAG'de ise model üretim sırasında kendisi 'fully supported / partially supported / no support' değerlerinden birini alan ISSUP token'ı üretir.",
+      "answer": "Dokümanda bulamadım.",
+      "context_has_source": false,
+      "citations": [],
+      "invented_citations": [],
+      "context": [
+        "self_rag-0030",
+        "self_rag-0072",
+        "ragas-0023",
+        "ragas-0019",
+        "ragas-0020"
+      ],
+      "seconds": 4.6,
+      "kind": "refusal"
+    },
+    {
+      "id": "q16",
+      "type": "comparison",
+      "question": "Ragas ve QLoRA makaleleri, LLM tabanlı otomatik değerlendirmenin insan değerlendirmesiyle uyumu hakkında ne buluyor?",
+      "expected": "Ragas: önerilen metrikler insan yargılarıyla yüksek uyum gösteriyor (ör. faithfulness'ta 0,95) ve basit GPT puanlama/sıralama yöntemlerinden çok daha iyi. QLoRA: GPT-4 ile insanlar sistem düzeyinde orta düzeyde uyumlu (Kendall τ=0,43, Spearman r=0,55), örnek düzeyinde zayıf (Fleiss κ=0,25); model tabanlı değerlendirme ucuz ama belirsizlik içeriyor.",
+      "answer": "Ragas makalesi, LLM tabanlı otomatik değerlendirmenin insan değerlendirmesine göre doğruluk açısından bir alternatif olduğunu belirtir. Özellikle sistem seviyesinde GPT-4 ile insan değerlendirmeleri arasında τ = 0.43 ve r = 0.55 olan orta düzey bir uyum olduğunu gösterir. Ancak örnek seviyesinde GPT-4 ile insanların çoğunlukla oyuna göre uyum daha zayıf olup Fleiss κ = 0.25 olarak belirtilir. Bu, LLM tabanlı değerlendirmenin insan değerlendirmesine göre orta düzeyde uyumlu olduğunu gösterir [qlora, s.9–10, §5.3].\n\nQLoRA makalesi, insan değerlendirmesine göre LLM tabanlı değerlendirmenin bir alternatif olduğunu, özellikle Vicuna benchmark’unda Guanaco 7B gibi modellerde kısmen farklılık göstermesine rağmen çoğu modelde tutarlı olduğunu belirtir. Ancak, insan ve GPT-4 tarafından yapılan değerlendirmeler arasında sistem seviyesinde orta düzey bir uyum olduğunu ve bu nedenle model tabanlı değerlendirmenin insan değerlendirmesine göre biraz güvenilir bir alternatif olduğunu söyler [qlora, s.9–10, §5.3].\n\nDokümanda bulamadım.",
+      "context_has_source": true,
+      "citations": [
+        "[qlora, s.9–10, §5.3]",
+        "[qlora, s.9–10, §5.3]"
+      ],
+      "invented_citations": [],
+      "context": [
+        "ragas-0001",
+        "qlora-0050",
+        "ragas-0012",
+        "qlora-0042",
+        "ragas-0013"
+      ],
+      "seconds": 14.5,
+      "kind": "partial"
+    },
+    {
+      "id": "q17",
+      "type": "unanswerable",
+      "question": "QLoRA makalesine göre Guanaco 65B modelini eğitmek kaç dolara mal oldu?",
+      "expected": "Dokümanda bulamadım.",
+      "answer": "Dokümanda bulamadım.",
+      "context_has_source": false,
+      "citations": [],
+      "invented_citations": [],
+      "context": [
+        "qlora-0112",
+        "qlora-0051",
+        "qlora-0055",
+        "qlora-0049",
+        "qlora-0056"
+      ],
+      "seconds": 6.7,
+      "kind": "refusal"
+    },
+    {
+      "id": "q18",
+      "type": "unanswerable",
+      "question": "Self-RAG modelleri hangi yazılım lisansıyla yayınlandı?",
+      "expected": "Dokümanda bulamadım.",
+      "answer": "Dokümanda bulamadım.",
+      "context_has_source": false,
+      "citations": [],
+      "invented_citations": [],
+      "context": [
+        "self_rag-0062",
+        "self_rag-0073",
+        "self_rag-0075",
+        "self_rag-0005",
+        "self_rag-0034"
+      ],
+      "seconds": 2.9,
+      "kind": "refusal"
+    },
+    {
+      "id": "q19",
+      "type": "unanswerable",
+      "question": "E5 makalesine göre E5'in Türkçe metinlerdeki başarımı nedir?",
+      "expected": "Dokümanda bulamadım.",
+      "answer": "Dokümanda bulamadım.",
+      "context_has_source": false,
+      "citations": [],
+      "invented_citations": [],
+      "context": [
+        "e5-0050",
+        "e5-0040",
+        "e5-0001",
+        "bge_m3-0054",
+        "e5-0005"
+      ],
+      "seconds": 3.6,
+      "kind": "refusal"
+    },
+    {
+      "id": "q20",
+      "type": "unanswerable",
+      "question": "bge-m3'ün ürettiği dense embedding vektörünün boyutu kaçtır?",
+      "expected": "Dokümanda bulamadım.",
+      "answer": "Dokümanda bulamadım.",
+      "context_has_source": false,
+      "citations": [],
+      "invented_citations": [],
+      "context": [
+        "bge_m3-0039",
+        "bge_m3-0012",
+        "bge_m3-0117",
+        "bge_m3-0018",
+        "bge_m3-0063"
+      ],
+      "seconds": 5.2,
+      "kind": "refusal"
+    }
+  ],
+  "note": "summary recomputed from the stored answers after splitting refusals into refusal/partial (same answers, no new LLM run)"
+}
