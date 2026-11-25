@@ -38,3 +38,10 @@ def test_retrieval_settings_have_defaults_and_can_be_overridden(monkeypatch):
 
     assert s.qdrant_url == "http://localhost:6333"
     assert s.embedding_model == "BAAI/bge-m3"
+
+
+def test_default_retriever_is_a_known_variant(monkeypatch):
+    from app.retrieval import RETRIEVERS
+
+    monkeypatch.delenv("RETRIEVER", raising=False)
+    assert Settings(_env_file=None, llm_base_url="x", llm_model="y").retriever in RETRIEVERS

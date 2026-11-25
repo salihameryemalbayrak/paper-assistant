@@ -26,8 +26,9 @@ class Settings(BaseSettings):
     # Hugging Face model id for sentence-transformers. Changing it needs a re-index:
     # each model gets its own Qdrant collection (vector sizes differ between models).
     embedding_model: str = "intfloat/multilingual-e5-small"
-    # Retriever used by the answer chain: dense | bm25 | hybrid (see app/retrieval.py).
-    retriever: str = "dense"
+    # Retriever used by the answer chain; variants in app/retrieval.py, chosen by
+    # measurement (docs/DECISIONS.md, D32). Translated variants call the LLM once per question.
+    retriever: str = "dense_tr_bm25_en"
 
 
 @lru_cache

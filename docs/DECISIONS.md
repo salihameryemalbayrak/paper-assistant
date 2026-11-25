@@ -325,3 +325,64 @@ Her karar için:
   2. Kaynak etiketi düzeltme fonksiyonu her tireyi uzun tireye çeviriyordu (`bge_m-3` → `bge_m–3`); artık yalnızca sayfa aralıklarına uygulanıyor.
   3. (Süreç) `--answers` sonuç dosyasının adında retriever yoktu; hibrit sonuç dense sonucunun üstüne yazıldı. Dense sonuç git'ten geri alındı, dosya adına retriever eklendi.
 - **Görülen model hatası (sayımların yakalamadığı):** Karşılaştırma sorularında 4B model iki makalenin bilgilerini karıştırıyor (q14: M3'ün [CLS] yöntemini E5'e; q16: QLoRA bulgularını Ragas'a mal ediyor). Etiket geçerli, iddia yanlış. Bunu RAGAS faithfulness ölçümü yakalamalı (Aşama 7); daha büyük model karşılaştırması Aşama 9.
+
+### D32. TR→EN sorgu çevirisi ve varsayılan retriever: dense(TR) + BM25(EN)
+- **Çeviri zinciri:** `app/translate.py`, LCEL ile `prompt | LLM | metin`. Ardından temizleme adımı: "Translation:" etiketi, tırnaklar ve açıklama satırları atılır. Çıktı boşsa orijinal soru kullanılır (çeviri başarısız olsa da arama çalışır).
+  - **Temperature 0:** Her adımda en olası token seçilir. Aynı soru her seferinde aynı çeviriyi verir; eval tekrarlanabilir kalır.
+  - **Prompt kuralları:** Teknik terimler, model/veri seti adları ve sayılar aynen kalır. "Tablo 6" → "Table 6". Zaten İngilizce olan soru değiştirilmez. Bunun için sezgisel bir "Türkçe karakter var mı" kontrolü yerine modele güveniliyor: "E5 modeli neyi ölçer" sorusunda hiç Türkçe karakter yok.
+- **Eval için kayıtlı çeviriler:** `eval/translations.jsonl` (`uv run python -m eval.translations`). Hızlı eval LLM çağırmaz; her koşu aynı çevirileri kullanır, böylece Recall farkı çeviri rastlantısından değil retriever'dan gelir.
+  - Alanlar: `en` modelin ham çevirisi, hiç değiştirilmez (gerçek sistemin göreceği budur); `en_fixed` insan düzeltmesi; `reviewed`.
+  - Önlemler: Dosya varsa `--force` olmadan yeniden üretilmez (insan kontrolü silinmesin). Yükleyici, Türkçe soru sonradan değiştiyse "çeviri eski" diye hata verir.
+  - 20 sorunun 20'si çevrildi, ortanca 0,83 sn (en fazla 1,69 sn), qwen3:4b-instruct, Apple M4.
+  - Kontrol bulguları:
+    - **q11 yanlış:** "deneme" → "trial" (doğrusu "essay"; "trial" Self-RAG'de 0 kez geçiyor).
+    - **q07, q16:** Türkçe "uyum" → "alignment". Ragas makalesi "agreement" diyor; "alignment" 0 kez geçiyor. Bu çeviri hatası değil, **kelime uyuşmazlığı** (vocabulary mismatch): soran kişi makalenin hangi kelimeyi seçtiğini bilemez. BM25'i yapay olarak kolaylaştırmamak için düzeltilmedi.
+- **Tasarım: önce çevir, sonra dağıt.** Retriever girdisi `{"tr": ..., "en": ...}` sözlüğü. Çeviri bir kez yapılır; her kol `itemgetter("tr"|"en")` ile kendi dilini alır. Varyantlar kodda bir tablo olarak tutuluyor (`BRANCHES`: varyant → (dil, motor) listesi). Aynı motor birden fazla kolda kullanılırsa bir kez kurulup paylaşılıyor.
+  - `EnsembleRetriever.invoke` girdiyi `str` diye tipliyor, ama kaynak koduna göre (langchain-classic 1.1.0, `rank_fusion`) girdiyi değiştirmeden her kola iletiyor. Sözlük girdisi bu davranışa dayanıyor; bir testle sabitlendi (`test_ensemble_passes_a_dict_query_unchanged`). Yeni bir sürüm girdiyi dönüştürürse test kırılır.
+  - Çevirisiz varyantlarda sorgu yalnızca `{"tr"}`; LLM boşuna çağrılmaz. Çevirili bir varyant `"en"`yi bulamazsa `KeyError` ile hata verir, sessizce Türkçe soruyla aramaz.
+- **Hızlı eval** (16 cevaplanabilir soru, e5-small, kayıtlı çeviriler, Apple M4; gecikmeye çeviri dahil değil):
+
+| Varyant | Kollar | R@1 | R@3 | R@5 | R@10 | MRR | Gecikme |
+|---|---|---|---|---|---|---|---|
+| dense | dense(TR) | 0,375 | 0,531 | 0,594 | 0,750 | 0,509 | 22 ms |
+| bm25 | BM25(TR) | 0,375 | 0,500 | 0,562 | 0,750 | 0,485 | 0,6 ms |
+| hybrid | dense(TR) + BM25(TR) | 0,375 | 0,469 | 0,625 | 0,812 | 0,487 | 21 ms |
+| dense_en | dense(EN) | 0,312 | 0,562 | 0,688 | 0,844 | 0,492 | 19 ms |
+| bm25_en | BM25(EN) | **0,469** | 0,656 | 0,750 | **0,906** | **0,646** | 0,5 ms |
+| dense_tr_en | dense(TR) + dense(EN) | 0,438 | 0,562 | 0,656 | 0,812 | 0,552 | 43 ms |
+| hybrid_en | dense(TR) + dense(EN) + BM25(EN) | 0,375 | 0,656 | 0,719 | 0,844 | 0,556 | 44 ms |
+| **dense_tr_bm25_en** | dense(TR) + BM25(EN) | 0,375 | **0,719** | **0,781** | 0,844 | 0,563 | 22 ms |
+
+  - Eski üç varyant, refactor sonrası dünküyle birebir aynı sayıları verdi: yeni yapı davranışı değiştirmedi.
+- **Bulgu 1: çevirinin en büyük katkısı BM25'e.** MRR 0,485 → 0,646. İlk 10'da bulunamayan soru kalmadı. Kelime eşleşmesi makalenin dilinde sorulunca çalışıyor; CLAUDE.md'deki dil stratejisinin gerekçesi ölçümle doğrulandı.
+- **Bulgu 2: yanlış tahmin.** q11'deki "trial" hatasının BM25'i bozacağını tahmin etmiştim; bm25_en q11'i 1. sırada buldu. Sorgudaki diğer kelimeler (Self-RAG, Figure 1, vacation, prompt) tek kelimelik hatayı telafi etti. BM25 tek bir kelimeye değil, kelimelerin toplamına bakar.
+- **Bulgu 3: kol sayısı = oy sayısı.** hybrid_en, bm25_en'den kötü. Eşit ağırlıklı üç kolda dense fiilen 2/3 oy alıyor. q13'te BM25(EN) doğru chunk'ı 1. sırada buluyor, iki dense kol hiç bulamıyor:
+  - Doğru chunk (yalnız BM25'te 1.): `1/3 · 1/61 = 0,0055`
+  - İki dense listede 5. olan yanlış chunk: `2 · 1/3 · 1/65 = 0,0103`
+  - Sonuç: BM25'in "eminim" sinyali bastırılıyor (D31'deki "tek listede bulunanı geriye itme" sorununun güçlü hâli). Çözüm, ağırlık denemek değil, gerekçesi önceden belli bir varyant: **her motor kendi en iyi dilinde, birer oy** (dense TR + BM25 EN). q13 hybrid_en'de bulunamıyordu, bu varyantta 5. sırada.
+  - Ağırlıkları 16 soruda deneyerek ayarlamak bilinçli olarak yapılmadı: bu sorulara uyan, yenilerinde işe yaramayan bir ayar bulunurdu (aşırı uyum).
+- **Cevap eval** (qwen3:4b-instruct, bağlamda 5 chunk, çeviri canlı ve gecikmeye dahil, Apple M4):
+
+| | dense | hybrid | bm25_en | **dense_tr_bm25_en** |
+|---|---|---|---|---|
+| Doğru reddetme | 4/4 | 4/4 | 4/4 | 4/4 |
+| Tam cevap (16) | 10 | 9 | 11 | **13** |
+| Kısmi | 0 | 2 | 1 | 0 |
+| Reddetme | 6 | 5 | 4 | 3 |
+| Kaynak bağlamdaydı ama reddetti | — | — | 3 | 2 (q08, q09) |
+| Geçersiz etiket | 0 | 1 | 0 | 0 |
+| Gecikme (ortanca) | 5,9 sn | 5,6 sn | 6,5 sn | 7,8 sn |
+
+  - dense_tr_bm25_en cevapları beklenen cevaplarla elle karşılaştırıldı:
+    - **10 doğru:** q01, q03–q07, q10, q11, q13, q16. q16 dün makaleleri karıştırıyordu, şimdi doğru.
+    - **1 eksik:** q02.
+    - **2 yanlış:** q12 (üç "Multi"den biri yanlış), q14 (E5'in average pooling'ini söylemiyor). Bunlar model hatası, arama hatası değil.
+  - Bu elle kontrol yalnızca bu varyant için yapıldı; dünkü dense cevapları aynı titizlikle okunmadı. Otomatik doğruluk ölçümü Aşama 7'de (RAGAS).
+- **Karar:** Varsayılan `RETRIEVER=dense_tr_bm25_en`. İlk 5'te en iyi Recall (0,781) bu varyantta; LLM'e 5 chunk verildiği için en önemli metrik bu. Cevap sayısı da aynı yönü gösteriyor (10 → 13).
+  - **Bedeli:** Soru başına ~1,9 sn daha uzun. ~0,8 sn'si çeviriden, gerisi daha çok soruya (daha uzun) cevap verilmesinden geliyor.
+  - **Sınırlar:**
+    - 16 soru az; farkların çoğu 1–2 soruluk.
+    - Eval seti İngilizce terim ağırlıklı ve bu BM25'i kolaylaştırıyor (D30).
+    - Anlam sorularında (q05, q15) dense hâlâ daha iyi; bu yüzden dense kol tutuluyor.
+  - Aşama 7'de eval seti 40–60 soruya çıkınca yeniden ölçülecek. Reranker (Aşama 6) bu varyantın aday listesi üzerine kurulacak.
+- **Süreç düzeltmesi:** Aynı gün aynı varyant iki kez çalıştırılınca sonuç dosyası üzerine yazılıyordu. Artık `unique_path` dosya varsa `_2`, `_3` ekliyor (CLAUDE.md: eski sonuç asla ezilmez).
