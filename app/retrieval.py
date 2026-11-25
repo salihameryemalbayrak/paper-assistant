@@ -46,6 +46,8 @@ BRANCHES: dict[str, list[tuple[str, str]]] = {
     "bm25_en": [("en", "bm25")],
     "dense_tr_en": [("tr", "dense"), ("en", "dense")],
     "hybrid_en": [("tr", "dense"), ("en", "dense"), ("en", "bm25")],
+    # each engine in its best language, one vote each (hybrid_en gives dense 2 of 3 votes)
+    "dense_tr_bm25_en": [("tr", "dense"), ("en", "bm25")],
 }
 RETRIEVERS = tuple(BRANCHES)
 
