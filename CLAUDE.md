@@ -117,7 +117,7 @@ Kodun tamamını sen yazarsın. Ben kodu okuyup anlayacağım, sorular soracağ�
 - Ben "bunu açıkla" veya "bunu ben yazayım" dersem o bölümde buna uy.
 - Önce uçtan uca çalışan basit bir sürüm, sonra katman katman geliştirme. Gereksiz soyutlama ve erken optimizasyon yok.
 - Bilmediğin bir sürüm veya API davranışını tahmin etme; dokümantasyona bak veya bana söyle.
-- Commit ve push'u ben yaparım; her adım sonunda commit komutlarını ver.
+- Commit ve push'u ben yaparım; her adım sonunda commit **ve push** komutlarını ver (`git push` dahil), ardından CI'ın yeşil olduğunu kontrol etmemi hatırlat.
 
 ## Kod kuralları
 - Python 3.11+, tip ipuçları, `ruff` + `pytest`.

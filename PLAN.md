@@ -13,14 +13,24 @@ Takvim yok; her aşama, "bitti" kriteri sağlanınca tamamlanmış sayılır.
 
 ---
 
-## Nerede kaldık (son oturum: 2026-11-25)
+## Nerede kaldık (son oturum: 2026-11-25, öğleden sonra ara)
 
 **Durum:** Aşama 0–5 tamam (yoklama dahil).
 - 5c sonucu: Varsayılan retriever artık `dense_tr_bm25_en`. Dense arama Türkçe soruyla, BM25 İngilizce çeviriyle yapılıyor; sonuçlar RRF ile birleşiyor.
 - Ölçümler: Recall@5 0,594 → 0,781; tam cevap 10 → 13/16. Bedeli soru başına ~1,9 sn. Ayrıntı: D32.
 
-**Sıradaki iş:**
-1. Aşama 6: reranker (cross-encoder, bge-reranker), `dense_tr_bm25_en`'in aday listesi üzerinde. Aday havuzunun genişliği (k=10/20) ve gecikme ölçülecek.
+**Sıradaki iş: Aşama 6 (reranker).** Kavramlar anlatıldı, henüz kod yok. Önerilen plan kullanıcı onayını bekliyor:
+1. **İki aşamalı akış:** `dense_tr_bm25_en` 20 aday getirir → cross-encoder puanlar → ilk 5 LLM'e gider.
+2. **Karşılaştırılacak iki reranker** (bilgiler Hugging Face'ten kontrol edildi):
+   - A) `BAAI/bge-reranker-v2-m3` + Türkçe soru (568M parametre, çok dilli, Apache-2.0, ~2,3 GB)
+   - B) `cross-encoder/ms-marco-MiniLM-L6-v2` + İngilizce çeviri (23M, yalnızca İngilizce, Apache-2.0, ~90 MB)
+   - Ölçülecekler: Recall@1/3/5, MRR, gecikme; en iyisi için cevap eval'i → D33.
+3. **Tasarım notları** (langchain-classic kaynak kodundan kontrol edildi):
+   - `CrossEncoderReranker` kullanılacak: (soru, `page_content`) çiftlerini `model.score` ile puanlar, sıralar, ilk `top_n`'i döndürür.
+   - `HuggingFaceCrossEncoder` yalnızca `langchain-community`'de var (kullanılmıyor). Bu yüzden `langchain_core.cross_encoders.BaseCrossEncoder` arayüzüyle kendi küçük sarmalayıcımız yazılacak (içinde sentence-transformers `CrossEncoder`).
+   - `ContextualCompressionRetriever` kullanılmayacak: retriever'a ve reranker'a aynı sorguyu veriyor, bizim sorgumuz ise `{"tr","en"}` sözlüğü. Bunun yerine LCEL kullanılacak: adayları getir, reranker'a `query["tr"]` ya da `query["en"]` ver.
+   - **Doğrulanacak:** Cross-encoder'ların azami uzunluğu ve kesme davranışı (chunk'lar 491 token'a kadar çıkıyor, soru eklenince 512'yi aşabilir). Model indirildikten sonra yapılandırmasından okunacak; gerekirse sayaç eklenecek.
+4. İlk dosya: `app/rerank.py`.
 
 **Oturum başında:**
 1. Docker Desktop'ı aç → `docker compose -f infra/docker-compose.yml up -d qdrant`
@@ -382,7 +392,7 @@ Türkçe soru ──► TR→EN çeviri ──► BM25(EN) + Dense(TR, EN) ─�
 - [x] Aşama 3 — Ingest (OCR testi ertelendi: taranmış belge yok)
 - [x] Aşama 4 — Dense + basit RAG (baseline: e5-small, qwen3:4b-instruct)
 - [x] Aşama 5 — Hibrit arama + sorgu çevirisi (varsayılan: `dense_tr_bm25_en`, D32)
-- [ ] Aşama 6 — Reranker
+- [ ] Aşama 6 — Reranker (plan hazır, onay bekliyor)
 - [ ] Aşama 7 — Tam eval + Langfuse
 - [ ] Aşama 8 — API + arayüz + Docker Compose
 - [ ] Aşama 9 — Model karşılaştırma matrisi
