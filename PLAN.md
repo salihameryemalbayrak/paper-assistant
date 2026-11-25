@@ -15,13 +15,12 @@ Takvim yok; her aşama, "bitti" kriteri sağlanınca tamamlanmış sayılır.
 
 ## Nerede kaldık (son oturum: 2026-11-25)
 
-**Durum:** Aşama 0–4 tamam. Aşama 5'in teknik işi bitti (5a BM25, 5b hibrit, 5c çeviri). Yalnızca Aşama 5 yoklaması kaldı.
+**Durum:** Aşama 0–5 tamam (yoklama dahil).
 - 5c sonucu: Varsayılan retriever artık `dense_tr_bm25_en`. Dense arama Türkçe soruyla, BM25 İngilizce çeviriyle yapılıyor; sonuçlar RRF ile birleşiyor.
 - Ölçümler: Recall@5 0,594 → 0,781; tam cevap 10 → 13/16. Bedeli soru başına ~1,9 sn. Ayrıntı: D32.
 
 **Sıradaki iş:**
-1. Aşama 5 yoklaması (aşağıdaki sorular).
-2. Aşama 6: reranker (cross-encoder, bge-reranker), `dense_tr_bm25_en`'in aday listesi üzerinde. Aday havuzunun genişliği (k=10/20) ve gecikme ölçülecek.
+1. Aşama 6: reranker (cross-encoder, bge-reranker), `dense_tr_bm25_en`'in aday listesi üzerinde. Aday havuzunun genişliği (k=10/20) ve gecikme ölçülecek.
 
 **Oturum başında:**
 1. Docker Desktop'ı aç → `docker compose -f infra/docker-compose.yml up -d qdrant`
@@ -382,7 +381,7 @@ Türkçe soru ──► TR→EN çeviri ──► BM25(EN) + Dense(TR, EN) ─�
 - [x] Aşama 2 — Eval seti
 - [x] Aşama 3 — Ingest (OCR testi ertelendi: taranmış belge yok)
 - [x] Aşama 4 — Dense + basit RAG (baseline: e5-small, qwen3:4b-instruct)
-- [ ] Aşama 5 — Hibrit arama + sorgu çevirisi (5a ✓, 5b ✓, 5c ✓; yoklama kaldı)
+- [x] Aşama 5 — Hibrit arama + sorgu çevirisi (varsayılan: `dense_tr_bm25_en`, D32)
 - [ ] Aşama 6 — Reranker
 - [ ] Aşama 7 — Tam eval + Langfuse
 - [ ] Aşama 8 — API + arayüz + Docker Compose
