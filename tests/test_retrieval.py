@@ -1,10 +1,11 @@
-"""Hybrid fusion with fake retrievers: no Qdrant, no model download."""
+"""Fusion and variant wiring with fake retrievers: no Qdrant, no model download."""
 
+import pytest
 from langchain_classic.retrievers import EnsembleRetriever
 from langchain_core.documents import Document
 from langchain_core.runnables import RunnableLambda
 
-from app.retrieval import RRF_C
+from app.retrieval import RETRIEVERS, RRF_C, compose, needs_translation
 
 
 def doc(chunk_id: str) -> Document:
@@ -35,3 +36,51 @@ def test_duplicates_are_merged_by_chunk_id():
 def test_chunk_from_one_list_is_kept():
     # BM25 alone finds "z" (e.g. a figure number); fusion must not drop it
     assert "z" in fuse(("a", "b"), ("z",))
+
+
+# Variant wiring: fake engines that return the query text they received as a chunk id.
+def echo(engine: str) -> RunnableLambda:
+    return RunnableLambda(lambda text: [doc(f"{engine}:{text}")])
+
+
+ENGINES = {"dense": echo("dense"), "bm25": echo("bm25")}
+QUERY = {"tr": "seyrek arama", "en": "sparse retrieval"}
+
+
+def ids(name: str, k: int = 10) -> list[str]:
+    return [d.metadata["chunk_id"] for d in compose(name, ENGINES, k).invoke(QUERY)]
+
+
+def test_each_branch_gets_its_language():
+    assert ids("dense") == ["dense:seyrek arama"]
+    assert ids("bm25_en") == ["bm25:sparse retrieval"]
+    assert sorted(ids("hybrid_en")) == [
+        "bm25:sparse retrieval",
+        "dense:seyrek arama",
+        "dense:sparse retrieval",
+    ]
+
+
+def test_ensemble_passes_a_dict_query_unchanged():
+    # EnsembleRetriever types its input as str; the translated variants rely on it handing
+    # the dict to every branch as is. If a new version converts or checks it, this fails.
+    seen = []
+    branch = RunnableLambda(lambda query: seen.append(query) or [doc("a")])
+    EnsembleRetriever(retrievers=[branch, branch], id_key="chunk_id").invoke(QUERY)
+    assert seen == [QUERY, QUERY]
+
+
+def test_fused_result_is_cut_to_k():
+    assert len(ids("hybrid_en", k=2)) == 2
+
+
+def test_untranslated_variants_never_read_english():
+    # {"tr"} alone must be enough for them: no LLM call in the answer chain.
+    for name in RETRIEVERS:
+        if not needs_translation(name):
+            compose(name, ENGINES, 10).invoke({"tr": "soru"})
+
+
+def test_translated_variant_without_english_fails_loudly():
+    with pytest.raises(KeyError):
+        compose("bm25_en", ENGINES, 10).invoke({"tr": "soru"})

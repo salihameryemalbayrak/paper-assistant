@@ -2,8 +2,11 @@
 
 Chain (LangChain Expression Language):
 
-    question ─┬─ retriever ──────────► docs ─┐
-              └─ passthrough ────► question ─┴─► format context ─► prompt ─► LLM ─► text
+    question ─┬─ to query ─► {tr, en} ─► retriever ─► docs ─┐
+              └─ passthrough ─────────────────────► question ─┴─► context ─► prompt ─► LLM
+
+"to query" translates the question (TR -> EN) only for retrievers that use English
+branches (app.retrieval); otherwise the query is just {"tr": question}.
 
 The result keeps the retrieved docs next to the answer, so the sources can be shown and
 the citations in the answer can be checked against them.
@@ -16,6 +19,7 @@ import re
 import sys
 import time
 from collections.abc import Sequence
+from operator import itemgetter
 from typing import Any
 
 from langchain_core.documents import Document
@@ -99,32 +103,48 @@ def answer_kind(answer: str) -> str:
     return "partial" if rest else "refusal"
 
 
-def build_chain(retriever: Runnable, llm: BaseChatModel) -> Runnable:
-    """question -> {"question", "docs", "answer"}."""
+def build_chain(
+    retriever: Runnable, llm: BaseChatModel, translator: Runnable[str, str] | None = None
+) -> Runnable:
+    """question -> {"question", "query", "docs", "answer"}."""
+    to_query = (
+        RunnableParallel(tr=RunnablePassthrough(), en=translator)
+        if translator
+        else RunnableLambda(lambda question: {"tr": question})
+    )
     to_prompt_inputs = RunnableLambda(
         lambda x: {"context": format_docs(x["docs"]), "question": x["question"]}
     )
     answer = to_prompt_inputs | PROMPT | llm | StrOutputParser()
-    return RunnableParallel(docs=retriever, question=RunnablePassthrough()).assign(answer=answer)
+    return (
+        RunnableParallel(question=RunnablePassthrough(), query=to_query)
+        .assign(docs=itemgetter("query") | retriever)
+        .assign(answer=answer)
+    )
 
 
 def main() -> None:
     from app.config import get_settings
     from app.llm import get_chat_model
-    from app.retrieval import build_retriever
+    from app.retrieval import build_retriever, needs_translation
+    from app.translate import build_translator
 
     question = " ".join(sys.argv[1:]).strip()
     if not question:
         sys.exit('usage: uv run python -m app.ask "soru"')
 
     settings = get_settings()
+    llm = get_chat_model(settings)
     retriever = build_retriever(settings.retriever, CONTEXT_K)
-    chain = build_chain(retriever, get_chat_model(settings))
+    translator = build_translator(llm) if needs_translation(settings.retriever) else None
+    chain = build_chain(retriever, llm, translator)
 
     start = time.perf_counter()
     result = chain.invoke(question)
     elapsed = time.perf_counter() - start
 
+    if "en" in result["query"]:
+        print(f"[EN query: {result['query']['en']}]\n")
     print(result["answer"].strip())
     print("\nKaynaklar (bağlama verilen chunk'lar):")
     for doc in result["docs"]:

@@ -1,0 +1,142 @@
+{
+  "mode": "fast",
+  "date": "2026-11-25T11:31:36",
+  "git_commit": "9685fb9-dirty",
+  "hardware": "Apple M4, macOS 26.6.2",
+  "run_name": "dense_chunks_multilingual_e5_small",
+  "retriever": "dense",
+  "embedding_model": "intfloat/multilingual-e5-small",
+  "retrieval": "dense, Turkish query (no translation), top_k=10",
+  "translation_model": null,
+  "latency_excludes_translation": false,
+  "dataset": {
+    "file": "eval/dataset.jsonl",
+    "answerable": 16,
+    "total": 20
+  },
+  "latency_ms_median": 21.9,
+  "metrics": {
+    "all": {
+      "n": 16,
+      "recall@1": 0.375,
+      "recall@3": 0.53125,
+      "recall@5": 0.59375,
+      "recall@10": 0.75,
+      "mrr": 0.5090277777777777
+    },
+    "single_page": {
+      "n": 6,
+      "recall@1": 0.3333333333333333,
+      "recall@3": 0.6666666666666666,
+      "recall@5": 0.8333333333333334,
+      "recall@10": 0.8333333333333334,
+      "mrr": 0.5333333333333333
+    },
+    "table": {
+      "n": 4,
+      "recall@1": 1.0,
+      "recall@3": 1.0,
+      "recall@5": 1.0,
+      "recall@10": 1.0,
+      "mrr": 1.0
+    },
+    "figure": {
+      "n": 3,
+      "recall@1": 0.0,
+      "recall@3": 0.0,
+      "recall@5": 0.0,
+      "recall@10": 0.3333333333333333,
+      "mrr": 0.05555555555555555
+    },
+    "comparison": {
+      "n": 3,
+      "recall@1": 0.0,
+      "recall@3": 0.16666666666666666,
+      "recall@5": 0.16666666666666666,
+      "recall@10": 0.6666666666666666,
+      "mrr": 0.25925925925925924
+    }
+  },
+  "per_question": [
+    {
+      "id": "q01",
+      "type": "single_page",
+      "first_relevant_rank": null
+    },
+    {
+      "id": "q02",
+      "type": "single_page",
+      "first_relevant_rank": 1
+    },
+    {
+      "id": "q03",
+      "type": "single_page",
+      "first_relevant_rank": 1
+    },
+    {
+      "id": "q04",
+      "type": "single_page",
+      "first_relevant_rank": 5
+    },
+    {
+      "id": "q05",
+      "type": "single_page",
+      "first_relevant_rank": 2
+    },
+    {
+      "id": "q06",
+      "type": "single_page",
+      "first_relevant_rank": 2
+    },
+    {
+      "id": "q07",
+      "type": "table",
+      "first_relevant_rank": 1
+    },
+    {
+      "id": "q08",
+      "type": "table",
+      "first_relevant_rank": 1
+    },
+    {
+      "id": "q09",
+      "type": "table",
+      "first_relevant_rank": 1
+    },
+    {
+      "id": "q10",
+      "type": "table",
+      "first_relevant_rank": 1
+    },
+    {
+      "id": "q11",
+      "type": "figure",
+      "first_relevant_rank": 6
+    },
+    {
+      "id": "q12",
+      "type": "figure",
+      "first_relevant_rank": null
+    },
+    {
+      "id": "q13",
+      "type": "figure",
+      "first_relevant_rank": null
+    },
+    {
+      "id": "q14",
+      "type": "comparison",
+      "first_relevant_rank": 6
+    },
+    {
+      "id": "q15",
+      "type": "comparison",
+      "first_relevant_rank": 9
+    },
+    {
+      "id": "q16",
+      "type": "comparison",
+      "first_relevant_rank": 2
+    }
+  ]
+}

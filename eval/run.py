@@ -11,6 +11,7 @@ and per-question results, so every reported number is traceable.
 Usage:
     uv run python -m eval.run --fast                       # model from EMBEDDING_MODEL
     uv run python -m eval.run --fast --model BAAI/bge-m3
+    uv run python -m eval.run --fast --retriever hybrid_en   # English from translations.jsonl
     uv run python -m eval.run --answers
 """
 
@@ -29,10 +30,12 @@ from langchain_core.documents import Document
 from app.ask import CONTEXT_K, answer_kind, build_chain, check_citations, extract_citations
 from app.config import get_settings
 from app.llm import get_chat_model
-from app.retrieval import RETRIEVERS, build_retriever
+from app.retrieval import RETRIEVERS, Query, build_retriever, needs_translation, uses_dense
+from app.translate import build_translator
 from app.vectorstore import collection_name
 from eval.dataset import QuestionType, SourceRef, load_dataset
 from eval.retrieval_metrics import Hit, evaluate, reciprocal_rank
+from eval.translations import TRANSLATIONS, load_translations
 
 DATASET = Path("eval/dataset.jsonl")
 RESULTS_DIR = Path("docs/benchmarks/fast_eval")
@@ -63,17 +66,35 @@ def _hardware() -> str:
     return f"{platform.processor() or platform.machine()}, {platform.system()}"
 
 
+def describe_query(retriever_name: str, translation: str) -> str:
+    if not needs_translation(retriever_name):
+        return "Turkish query (no translation)"
+    return f"Turkish + English query ({translation})"
+
+
 def run_fast(model: str, retriever_name: str = "dense") -> dict:
     items = load_dataset(DATASET)
     retriever = build_retriever(retriever_name, TOP_K, model)
 
-    retriever.invoke("warm-up")  # first call loads the model; keep it out of the timings
+    # Translated variants read the reviewed, stored translations: no LLM call, so the
+    # timings below exclude translation (measured separately by eval.translations).
+    english: dict[str, str] = {}
+    translation_model = None
+    if needs_translation(retriever_name):
+        stored = load_translations(TRANSLATIONS, items)
+        english = {item.question: stored[item.id].en for item in items}
+        translation_model = stored[items[0].id].model
+
+    def to_query(question: str) -> Query:
+        return {"tr": question, "en": english[question]} if english else {"tr": question}
+
+    retriever.invoke({"tr": "warm-up", "en": "warm-up"})  # loads the model; not timed
     cache: dict[str, list[Hit]] = {}
     latencies_ms: list[float] = []
 
     def retrieve(question: str) -> list[Hit]:
         start = time.perf_counter()
-        docs = retriever.invoke(question)
+        docs = retriever.invoke(to_query(question))
         latencies_ms.append((time.perf_counter() - start) * 1000)
         cache[question] = [to_hit(d) for d in docs]
         return cache[question]
@@ -98,12 +119,15 @@ def run_fast(model: str, retriever_name: str = "dense") -> dict:
         "date": datetime.now().isoformat(timespec="seconds"),
         "git_commit": _git_commit(),
         "hardware": _hardware(),
-        "run_name": retriever_name
-        if retriever_name == "bm25"
-        else f"{retriever_name}_{collection_name(model)}",
+        "run_name": f"{retriever_name}_{collection_name(model)}"
+        if uses_dense(retriever_name)
+        else retriever_name,
         "retriever": retriever_name,
-        "embedding_model": None if retriever_name == "bm25" else model,
-        "retrieval": f"{retriever_name}, Turkish query (no translation), top_k={TOP_K}",
+        "embedding_model": model if uses_dense(retriever_name) else None,
+        "retrieval": f"{retriever_name}, "
+        f"{describe_query(retriever_name, f'stored, {TRANSLATIONS}')}, top_k={TOP_K}",
+        "translation_model": translation_model,
+        "latency_excludes_translation": needs_translation(retriever_name),
         "dataset": {"file": str(DATASET), "answerable": len(per_question), "total": len(items)},
         "latency_ms_median": round(median(latencies_ms), 1),
         "metrics": metrics,
@@ -139,8 +163,11 @@ def summarize_answers(rows: list[dict]) -> dict:
 def run_answers(model: str) -> dict:
     settings = get_settings()
     items = load_dataset(DATASET)
+    llm = get_chat_model(settings)
     retriever = build_retriever(settings.retriever, CONTEXT_K, model)
-    chain = build_chain(retriever, get_chat_model(settings))
+    # Live translation here: the answer eval measures the whole system, translation included.
+    translator = build_translator(llm) if needs_translation(settings.retriever) else None
+    chain = build_chain(retriever, llm, translator)
     chain.invoke("warm-up")  # loads the embedding model and the LLM
 
     rows = []
@@ -156,6 +183,7 @@ def run_answers(model: str) -> dict:
                 "id": item.id,
                 "type": item.type.value,
                 "question": item.question,
+                "query_en": out["query"].get("en"),
                 "expected": item.answer,
                 "answer": answer,
                 "kind": answer_kind(answer),  # answer | partial | refusal
@@ -177,10 +205,20 @@ def run_answers(model: str) -> dict:
         "llm_temperature": settings.llm_temperature,
         "embedding_model": model,
         "retriever": settings.retriever,
-        "retrieval": f"{settings.retriever}, Turkish query (no translation), context_k={CONTEXT_K}",
+        "retrieval": f"{settings.retriever}, "
+        f"{describe_query(settings.retriever, 'live, same LLM')}, context_k={CONTEXT_K}",
         "summary": summarize_answers(rows),
         "per_question": rows,
     }
+
+
+def unique_path(path: Path) -> Path:
+    """path, or path_2, path_3, ... if it exists: a rerun never overwrites a result."""
+    candidate, n = path, 2
+    while candidate.exists():
+        candidate = path.with_stem(f"{path.stem}_{n}")
+        n += 1
+    return candidate
 
 
 def print_summary(result: dict) -> None:
@@ -214,7 +252,7 @@ def main() -> None:
         print("\n" + json.dumps(result["summary"], indent=2, ensure_ascii=False))
         ANSWERS_DIR.mkdir(parents=True, exist_ok=True)
         slug = re.sub(r"[^a-z0-9]+", "_", get_settings().llm_model.lower()).strip("_")
-        out = ANSWERS_DIR / f"{result['date'][:10]}_{result['retriever']}_{slug}.json"
+        out = unique_path(ANSWERS_DIR / f"{result['date'][:10]}_{result['retriever']}_{slug}.json")
         out.write_text(json.dumps(result, indent=2, ensure_ascii=False) + "\n", encoding="utf-8")
         print(f"saved -> {out}")
         return
@@ -223,7 +261,7 @@ def main() -> None:
     print_summary(result)
 
     RESULTS_DIR.mkdir(parents=True, exist_ok=True)
-    out = RESULTS_DIR / f"{result['date'][:10]}_{result['run_name']}.json"
+    out = unique_path(RESULTS_DIR / f"{result['date'][:10]}_{result['run_name']}.json")
     out.write_text(json.dumps(result, indent=2, ensure_ascii=False) + "\n", encoding="utf-8")
     print(f"saved -> {out}")
 

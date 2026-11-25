@@ -66,8 +66,21 @@ def test_chain_returns_docs_question_and_answer():
     assert result == {
         "docs": docs,
         "question": "Ragas neyi ölçer?",
+        "query": {"tr": "Ragas neyi ölçer?"},  # no translator: no LLM call for "en"
         "answer": "Cevap [ragas, s.3, §3].",
     }
+
+
+def test_chain_with_translator_passes_both_languages_to_the_retriever():
+    seen = []
+    retriever = RunnableLambda(lambda query: seen.append(query) or [doc()])
+    translator = RunnableLambda(lambda question: "What does Ragas measure?")
+    llm = FakeListChatModel(responses=["Cevap [ragas, s.3, §3]."])
+
+    result = build_chain(retriever, llm, translator).invoke("Ragas neyi ölçer?")
+
+    assert seen == [{"tr": "Ragas neyi ölçer?", "en": "What does Ragas measure?"}]
+    assert result["query"]["en"] == "What does Ragas measure?"
 
 
 def test_answer_kind_separates_refusal_partial_and_answer():
