@@ -164,7 +164,7 @@ Repo iskeleti oluştukça doldurulacak:
 | Qdrant başlatma / durdurma | `docker compose -f infra/docker-compose.yml up -d qdrant` / `... down` |
 | İndeksleme (Qdrant) | `uv run python -m ingest.index` (`--model BAAI/bge-m3` ile başka model) |
 | Soru sorma (CLI) | `uv run python -m app.ask "soru"` |
-| Hızlı eval (retrieval) | `uv run python -m eval.run --fast` (`--retriever dense_tr_bm25_en`, `--reranker minilm_en`, `--model ...`; varyantlar `app/retrieval.py`, reranker'lar `app/rerank.py`) |
+| Hızlı eval (retrieval) | `uv run python -m eval.run --fast` (`--retriever dense_tr_bm25_en`, `--reranker minilm_en`, `--depth 20`, `--model ...`; varyantlar `app/retrieval.py`, reranker'lar `app/rerank.py`) |
 | Eval sorularının kanıt kontrolü | `uv run python -m eval.check_evidence` (ifade biçimi: `uv run python -m eval.check_phrasing`) |
 | Cevap eval (LLM) | `uv run python -m eval.run --answers` (retriever `.env`'deki `RETRIEVER`; tek seferlik: `RETRIEVER=dense uv run ...`) |
 | Eval sorularını çevirme | `uv run python -m eval.translations` → `eval/translations.jsonl` (elle kontrol edilir) |

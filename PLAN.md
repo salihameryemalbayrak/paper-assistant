@@ -39,16 +39,16 @@ Takvim yok; her aşama, "bitti" kriteri sağlanınca tamamlanmış sayılır.
 **Evidence recall eklendi (D37):** Chunk düzeyinde R@5 0,540 (sayfa düzeyinde 0,671). Karşılaştırma sorularında complete@5 = 0.
 - Bulunan tutarsızlık: Hızlı eval k=10 ile, cevap zinciri k=5 ile kuruluyor; hibritte iki "ilk 5" farklı.
 
-**Sıradaki:**
-1. **Kol derinliği:** Her kol 20 sonuç, birleştirmeden sonra k. Hızlı eval ve cevap eval ile ölçülecek (D37).
-2. 7c RAGAS (hakem LLM seçimi: ücretsiz, sabit), 7d Langfuse, 7e CI'da hızlı eval.
+**Kol derinliği 20 eklendi (D38):** LLM'e giden kanıt 0,447 → 0,587. Doğru cevap 24/41'de kaldı. Darboğaz artık LLM'in tablo okuması (q44: satırlar bağlamda, cevap yanlış).
+
+**Sıradaki:** 7c RAGAS (hakem LLM seçimi, kullanıcı kararı) (hakem LLM seçimi: ücretsiz, sabit), 7d Langfuse, 7e CI'da hızlı eval.
 
 **Oturum başında:**
 1. Docker Desktop'ı aç → `docker compose -f infra/docker-compose.yml up -d qdrant`
 2. Ollama çalışmıyorsa `ollama serve` (model: `qwen3:4b-instruct`)
 3. Ortamın sağlam olduğunu doğrula:
-   - `uv run pytest` (96 test geçmeli)
-   - `uv run python -m eval.run --fast --retriever dense_tr_bm25_en` (18 makale: Recall@5 0,688, MRR 0,521 çıkmalı)
+   - `uv run pytest` (109 test geçmeli)
+   - `uv run python -m eval.run --fast --retriever dense_tr_bm25_en` (18 makale, 49 soru, derinlik 20: Recall@5 0,768, MRR 0,509, evidence recall@5 0,587 çıkmalı)
 
 **Bilinen hatalar ve sınırlamalar:**
 - **Büyük tablolar neredeyse kopya parçalara bölünüyor:** Self-RAG Tablo 2, uzun altyazıyı ve başlığı tekrarlayan 22 parçaya bölünmüş; ne dense ne BM25 doğru parçayı ayırt edebiliyor (q08). Olası çözüm: parçalarda altyazıyı kısaltmak. Ölçülerek denenecek.
@@ -62,6 +62,7 @@ Takvim yok; her aşama, "bitti" kriteri sağlanınca tamamlanmış sayılır.
 - **ARES Tablo 6'nın 4 chunk'ı 512 sınırını ~35 token aşıyor:** Geniş tablo; sütun başlığı satırı 332 token. Kabul edildi (D34). Çözüm, tablo ayırıcılarını sıkıştırmak; ölçülerek yapılmalı.
 - **Kardeş makaleler dikkat dağıtıyor:** q05'te mE5 chunk'ları E5'in sayfasını bağlamdan itti (D34).
 - **Çeviri modeli bazen uyduruyor:** q42'de soruyu çevirmek yerine yanlış bir cevap yazdı (D35). Guardrail adayı.
+- **Qwen bazen Çince token sızdırıyor:** q01 cevabında "检索" (D38).
 - **Tablo cevapları zayıf:** Arama tabloları buluyor ama cevaplar 2/10 doğru. Bölünmüş tablolarda gereken satır bağlamda olmuyor; model satır okumada hata yapıyor (D36).
 - **Şekil ve karşılaştırma soruları zayıf:** Şekil sorularında R@1 = 0 (8 soru); karşılaştırmalarda R@5 0,438 (D35).
 - **Eval seti İngilizce terim ağırlıklı:** BM25'i kolaylaştırıyor olabilir; Aşama 7'de terimsiz doğal Türkçe sorular eklenmeli. D30.

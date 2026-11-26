@@ -69,8 +69,9 @@ def compose(name: str, engines: Mapping[str, Runnable], k: int) -> Runnable[Quer
     branches = [
         RunnableLambda(itemgetter(lang)) | engines[engine] for lang, engine in BRANCHES[name]
     ]
+    cut = RunnableLambda(lambda docs: docs[:k])
     if len(branches) == 1:
-        return branches[0]
+        return branches[0] | cut
     # EnsembleRetriever types its input as str, but only passes it on to each branch
     # unchanged (langchain-classic 1.1.0, rank_fusion); tests/test_retrieval.py pins this.
     ensemble = EnsembleRetriever(
@@ -79,8 +80,8 @@ def compose(name: str, engines: Mapping[str, Runnable], k: int) -> Runnable[Quer
         c=RRF_C,
         id_key="chunk_id",  # the same chunk from several lists counts once, scores added
     )
-    # Several lists of k can fuse into more unique chunks; keep the top k.
-    return ensemble | RunnableLambda(lambda docs: docs[:k])
+    # Several lists fuse into more unique chunks than any one list; keep the top k.
+    return ensemble | cut
 
 
 @lru_cache
@@ -90,19 +91,30 @@ def get_cross_encoder(reranker: str) -> SentenceTransformerCrossEncoder:
 
 
 def build_retriever(
-    name: str, k: int, model: str | None = None, reranker: str = "", candidates: int = 20
+    name: str,
+    k: int,
+    model: str | None = None,
+    reranker: str = "",
+    candidates: int = 20,
+    depth: int = 20,
 ) -> Runnable[Query, list[Document]]:
-    """k documents from variant `name`; with a reranker: `candidates` reranked down to k."""
+    """k documents from variant `name`; with a reranker: `candidates` reranked down to k.
+
+    depth: how many results each branch returns before fusion (at least k). RRF rewards
+    a chunk found by several branches, which it can only see if the lists are deep
+    enough: with depth = k, the fused top k depends on k itself (D37).
+    """
     if name not in BRANCHES:
         raise ValueError(f"unknown retriever {name!r}; choose from {RETRIEVERS}")
     if reranker:
         if reranker not in RERANKERS:
             raise ValueError(f"unknown reranker {reranker!r}; choose from {tuple(RERANKERS)}")
-        base = build_retriever(name, candidates, model)
+        base = build_retriever(name, candidates, model, depth=max(depth, candidates))
         return with_reranker(base, get_cross_encoder(reranker), RERANKERS[reranker][1], k)
+    depth = max(depth, k)
     engines: dict[str, Runnable] = {}  # each engine built once, shared by its branches
     if uses_dense(name):
-        engines["dense"] = get_vectorstore(model).as_retriever(search_kwargs={"k": k})
+        engines["dense"] = get_vectorstore(model).as_retriever(search_kwargs={"k": depth})
     if any(engine == "bm25" for _, engine in BRANCHES[name]):
-        engines["bm25"] = load_bm25_retriever(k=k)
+        engines["bm25"] = load_bm25_retriever(k=depth)
     return compose(name, engines, k)

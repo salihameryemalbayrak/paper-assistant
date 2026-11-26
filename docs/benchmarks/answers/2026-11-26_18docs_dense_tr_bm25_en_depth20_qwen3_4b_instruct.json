@@ -1,0 +1,1155 @@
+{
+  "mode": "answers",
+  "date": "2026-11-26T18:13:49",
+  "git_commit": "2e225c4-dirty",
+  "hardware": "Apple M4, macOS 26.6.2",
+  "llm": "qwen3:4b-instruct @ http://localhost:11434/v1",
+  "llm_temperature": 0.0,
+  "corpus": {
+    "docs": 18,
+    "chunks": 1734
+  },
+  "embedding_model": "intfloat/multilingual-e5-small",
+  "retriever": "dense_tr_bm25_en",
+  "reranker": null,
+  "reranker_counts": null,
+  "retrieval_depth": 20,
+  "retrieval": "dense_tr_bm25_en, Turkish + English query (live, same LLM), context_k=5",
+  "summary": {
+    "correct_refusals": "8/8",
+    "answerable_answered": "29/41",
+    "answerable_partial": [
+      "q21"
+    ],
+    "answerable_refused": [
+      "q05",
+      "q08",
+      "q09",
+      "q11",
+      "q12",
+      "q13",
+      "q15",
+      "q25",
+      "q31",
+      "q32",
+      "q45"
+    ],
+    "refused_although_source_page_in_context": [
+      "q08",
+      "q09",
+      "q11",
+      "q25",
+      "q31",
+      "q32",
+      "q45"
+    ],
+    "answers_without_citation": [],
+    "answers_with_invented_citation": [
+      "q35"
+    ],
+    "seconds_median": 10.1
+  },
+  "per_question": [
+    {
+      "id": "q01",
+      "type": "single_page",
+      "question": "Ragas çerçevesi bir RAG sistemini hangi üç kalite boyutunda değerlendirir?",
+      "query_en": "What three quality dimensions does the Ragas framework evaluate for a RAG system?",
+      "expected": "Faithfulness (cevabın verilen bağlama dayanması), answer relevance (cevabın sorulan soruyu karşılaması) ve context relevance (getirilen bağlamın odaklı olması, gereksiz bilgi içermemesi).",
+      "answer": "Ragas çerçevesi bir RAG sistemini aşağıdaki üç kalite boyutunda değerlendirir:  \n- Faithfulness (yani cevap,检索 edilen bağlamda sağlamdır mı)  \n- Answer relevance (yani cevap soruyu karşılar mı)  \n- Context relevance (yani检索 edilen bağlam yeterince odaklanmıştır mı) [ragas, s.5, §6]",
+      "kind": "answer",
+      "context_has_source": false,
+      "evidence_in_context": null,
+      "citations": [
+        "[ragas, s.5, §6]"
+      ],
+      "invented_citations": [],
+      "context": [
+        "ragas-0001",
+        "ragas-0023",
+        "ragas-0005",
+        "ragas-0020",
+        "ares-0003"
+      ],
+      "seconds": 7.0
+    },
+    {
+      "id": "q02",
+      "type": "single_page",
+      "question": "Self-RAG'de critic modelinin eğitim verisi nasıl toplandı?",
+      "query_en": "How was the critic model's training data collected in Self-RAG?",
+      "expected": "GPT-4'e her yansıma (reflection) token türü için ayrı bir talimat ve birkaç örnekle sorularak token tahminleri üretildi; tür başına 4k–20k örnek toplandı ve bu bilgi kurum içi critic modeline (C) damıtıldı. Elle kontrolde GPT-4 tahminlerinin insan değerlendirmesiyle yüksek uyum gösterdiği görüldü.",
+      "answer": "Self-RAG'de critic modelinin eğitim verisi, bir GPT-4 örneğiyle (i.e., GPT-4; OpenAI 2023) bir (x, y) çifti için bir yansıma token'ı (reflection token) toplandı. Bu işlem, veri seti Dcritic'e eklenir [self_rag, s.18, §A.2].",
+      "kind": "answer",
+      "context_has_source": true,
+      "evidence_in_context": null,
+      "citations": [
+        "[self_rag, s.18, §A.2]"
+      ],
+      "invented_citations": [],
+      "context": [
+        "self_rag-0025",
+        "self_rag-0020",
+        "self_rag-0009",
+        "self_rag-0019",
+        "self_rag-0081"
+      ],
+      "seconds": 6.8
+    },
+    {
+      "id": "q03",
+      "type": "single_page",
+      "question": "M3-Embedding'in sparse (seyrek) arama yöntemi diller arası (cross-lingual) aramada neden zayıf kalıyor?",
+      "query_en": "Why is the sparse search method of M3-Embedding weak in cross-lingual search?",
+      "expected": "Sorgu ve pasaj farklı dillerde olduğu için ortak geçen terim çok az. Sparse yöntem terim eşleşmesine dayandığından BM25'ten iyi olsa da diğer yöntemlerin gerisinde kalıyor.",
+      "answer": "M3-Embedding (Sparse) arama yönteminin diller arası (cross-lingual) aramada zayıf kalmasının nedeni, sorgu ve metin farklı dillerde olduğunda sadece çok sınırlı birlikte var olan terimlerin (co-existed terms) olmasıdır [bge_m3, s.7, §4.2].",
+      "kind": "answer",
+      "context_has_source": true,
+      "evidence_in_context": null,
+      "citations": [
+        "[bge_m3, s.7, §4.2]"
+      ],
+      "invented_citations": [],
+      "context": [
+        "bge_m3-0053",
+        "bge_m3-0054",
+        "bge_m3-0005",
+        "bge_m3-0063",
+        "bge_m3-0052"
+      ],
+      "seconds": 7.7
+    },
+    {
+      "id": "q04",
+      "type": "single_page",
+      "question": "E5'i eğitmek için kullanılan CCPairs veri setinde filtrelemeden önce ve sonra kaç metin çifti var?",
+      "query_en": "How many text pairs are there in the CCPairs dataset before and after filtering for training E5?",
+      "expected": "İlk filtrelemeden sonra yaklaşık 1,3 milyar çift; tutarlılık tabanlı filtreden (consistency-based filter) sonra yaklaşık 270 milyon çift.",
+      "answer": "Filtrelemeden önce CCPairs veri setinde yaklaşık 1.3 milyar metin çifti var ve filtrelemeden sonra bu sayı yaklaşık 270 milyon metin çiftine düşer [e5, s.3, §3].",
+      "kind": "answer",
+      "context_has_source": true,
+      "evidence_in_context": null,
+      "citations": [
+        "[e5, s.3, §3]"
+      ],
+      "invented_citations": [],
+      "context": [
+        "e5-0004",
+        "e5-0001",
+        "e5-0013",
+        "e5-0040",
+        "e5-0052"
+      ],
+      "seconds": 7.7
+    },
+    {
+      "id": "q05",
+      "type": "single_page",
+      "question": "E5 modeli sorgu ile pasajı birbirinden ayırt etmek için girdilere hangi önekleri ekler?",
+      "query_en": "Which prefixes does the E5 model append to inputs to distinguish between queries and passages?",
+      "expected": "Sorgulara \"query:\", pasajlara \"passage:\" öneki eklenir. Tüm metinler için aynı kodlayıcı (encoder) kullanıldığından bu asimetrik tasarım önemlidir.",
+      "answer": "Dokümanda bulamadım.",
+      "kind": "refusal",
+      "context_has_source": false,
+      "evidence_in_context": null,
+      "citations": [],
+      "invented_citations": [],
+      "context": [
+        "me5-0001",
+        "e5-0001",
+        "ares-0011",
+        "me5-0018",
+        "vllm-0063"
+      ],
+      "seconds": 5.5
+    },
+    {
+      "id": "q06",
+      "type": "single_page",
+      "question": "QLoRA'nın performanstan ödün vermeden bellek tasarrufu sağlayan üç yeniliği nedir?",
+      "query_en": "What are the three innovations of QLoRA that enable memory efficiency without compromising performance?",
+      "expected": "4-bit NormalFloat (NF4) veri tipi, Double Quantization (niceleme sabitlerinin de nicelenmesi) ve bellek sıçramalarını yöneten Paged Optimizers.",
+      "answer": "QLoRA'nın performanstan ödün vermeden bellek tasarrufu sağlayan üç yeniliği şunlardır: (1) 4-bit NormalFloat (NF4), normally distributed veriler için bilimsel olarak en iyi quantization veri tipi ve 4-bit integer ve 4-bit float'tan daha iyi empirik sonuçlar verir. (2) Double Quantization, quantization sabitlerini quantize ederek ortalama 0.37 bit/parametre (65B model için yaklaşık 3 GB) tasarruf sağlar. (3) Paged Optimizers, NVIDIA unified memory kullanarak uzun dizide mini-batch işleme sırasında meydana gelen gradient checkpointing bellek çarpmalarını önler [qlora, s.2, §1].",
+      "kind": "answer",
+      "context_has_source": true,
+      "evidence_in_context": null,
+      "citations": [
+        "[qlora, s.2, §1]"
+      ],
+      "invented_citations": [],
+      "context": [
+        "qlora-0006",
+        "qlora-0001",
+        "qlora-0035",
+        "qlora-0032",
+        "qlora-0021"
+      ],
+      "seconds": 10.7
+    },
+    {
+      "id": "q07",
+      "type": "table",
+      "question": "Ragas makalesindeki Tablo 1'e göre faithfulness boyutunda Ragas, GPT Score ve GPT Ranking'in insan değerlendirmesiyle uyumu (accuracy) nedir?",
+      "query_en": "According to Table 1 in the Ragas paper, what is the alignment (accuracy) of Ragas, GPT Score, and GPT Ranking with human evaluation on the faithfulness dimension?",
+      "expected": "Ragas 0,95; GPT Score 0,72; GPT Ranking 0,54.",
+      "answer": "Ragas: 0.95, GPT Score: 0.72, GPT Ranking: 0.54 [ragas, s.5, §4]",
+      "kind": "answer",
+      "context_has_source": true,
+      "evidence_in_context": null,
+      "citations": [
+        "[ragas, s.5, §4]"
+      ],
+      "invented_citations": [],
+      "context": [
+        "ragas-0019",
+        "ragas-0020",
+        "ragas-0022",
+        "ragas-0021",
+        "ragas-0023"
+      ],
+      "seconds": 6.7
+    },
+    {
+      "id": "q08",
+      "type": "table",
+      "question": "Self-RAG 13B PopQA'da ne kadar doğruluk elde ediyor ve bu, retrieval kullanan ChatGPT (Ret-ChatGPT) ile nasıl karşılaştırılıyor?",
+      "query_en": "What accuracy does Self-RAG 13B achieve on PopQA and how does it compare to retrieval-based ChatGPT (Ret-ChatGPT)?",
+      "expected": "Self-RAG 13B: 55,8; Ret-ChatGPT: 50,8 (retrieval kullanmayan ChatGPT: 29,3).",
+      "answer": "Dokümanda bulamadım.",
+      "kind": "refusal",
+      "context_has_source": true,
+      "evidence_in_context": null,
+      "citations": [],
+      "invented_citations": [],
+      "context": [
+        "self_rag-0061",
+        "self_rag-0060",
+        "self_rag-0095",
+        "self_rag-0070",
+        "self_rag-0034"
+      ],
+      "seconds": 6.1
+    },
+    {
+      "id": "q09",
+      "type": "table",
+      "question": "MKQA diller arası arama deneyinde Türkçe sorgular için BM25 ve M3-Embedding (Dense) Recall@100 değerleri nedir?",
+      "query_en": "What are the BM25 and M3-Embedding (Dense) Recall@100 values for Turkish queries in the MKQA cross-lingual search experiment?",
+      "expected": "BM25: 45,8; M3 Dense: 75,6. Üç yöntemin birleşimi (All) 76,0.",
+      "answer": "Dokümanda bulamadım.",
+      "kind": "refusal",
+      "context_has_source": true,
+      "evidence_in_context": null,
+      "citations": [],
+      "invented_citations": [],
+      "context": [
+        "bge_m3-0053",
+        "bge_m3-0050",
+        "bge_m3-0052",
+        "bge_m3-0107",
+        "bge_m3-0100"
+      ],
+      "seconds": 8.3
+    },
+    {
+      "id": "q10",
+      "type": "table",
+      "question": "QLoRA makalesindeki Tablo 6'ya göre Guanaco 7B ne kadar bellek gerektiriyor ve Vicuna benchmark'ında ChatGPT'ye göre ortalama skoru nedir?",
+      "query_en": "According to Table 6 in the QLoRA paper, how much memory does Guanaco 7B require, and what is its average score compared to ChatGPT on the Vicuna benchmark?",
+      "expected": "4-bit modelde 5 GB bellek; ChatGPT skorunun ortalama %87,0'ı.",
+      "answer": "Guanaco 7B, 5 GB bellek gerektirir ve Vicuna benchmark'ında ChatGPT'ye göre 87.0% ortalama skorunu elde eder. [qlora, s.10, §5.3]",
+      "kind": "answer",
+      "context_has_source": true,
+      "evidence_in_context": null,
+      "citations": [
+        "[qlora, s.10, §5.3]"
+      ],
+      "invented_citations": [],
+      "context": [
+        "qlora-0054",
+        "qlora-0049",
+        "qlora-0055",
+        "qlora-0052",
+        "qlora-0053"
+      ],
+      "seconds": 10.6
+    },
+    {
+      "id": "q11",
+      "type": "figure",
+      "question": "Self-RAG genel bakış şeklinde (Şekil 1), 'en iyi yaz tatilin hakkında bir deneme yaz' istemi için model nasıl davranıyor?",
+      "query_en": "How does the model behave when given the prompt \"write a trial about the best vacation\" in the self-RAG general overview style (Figure 1)?",
+      "expected": "Retrieval yapmıyor (No Retrieval): görev olgusal bilgi gerektirmediği için doğrudan metin üretiyor. Klasik RAG ise gerekip gerekmediğine bakmadan her zaman sabit sayıda doküman getirir.",
+      "answer": "Dokümanda bulamadım.",
+      "kind": "refusal",
+      "context_has_source": true,
+      "evidence_in_context": null,
+      "citations": [],
+      "invented_citations": [],
+      "context": [
+        "self_rag-0018",
+        "self_rag-0003",
+        "self_rag-0019",
+        "self_rag-0022",
+        "self_rag-0081"
+      ],
+      "seconds": 6.5
+    },
+    {
+      "id": "q12",
+      "type": "figure",
+      "question": "M3-Embedding'in adındaki üç 'Multi' özelliği nedir (Şekil 1)?",
+      "query_en": "What are the three 'Multi' features in the name M3-Embedding (Figure 1)?",
+      "expected": "Multi-Linguality (100'den fazla dil; çok dilli ve diller arası arama), Multi-Functionality (dense, sparse ve multi-vector arama) ve Multi-Granularity (cümleden 8192 token'a kadar dokümana).",
+      "answer": "Dokümanda bulamadım.",
+      "kind": "refusal",
+      "context_has_source": false,
+      "evidence_in_context": null,
+      "citations": [],
+      "invented_citations": [],
+      "context": [
+        "bge_m3-0087",
+        "bge_m3-0034",
+        "bge_m3-0095",
+        "bge_m3-0019",
+        "bge_m3-0062"
+      ],
+      "seconds": 6.9
+    },
+    {
+      "id": "q13",
+      "type": "figure",
+      "question": "QLoRA makalesinin Şekil 1'ine göre QLoRA, LoRA'ya kıyasla neyi farklı yapıyor?",
+      "query_en": "According to Figure 1 of the QLoRA paper, what does QLoRA differ from LoRA?",
+      "expected": "Transformer modelini 4-bit hassasiyete nicemliyor (quantize) ve bellek sıçramalarını yönetmek için paged optimizer kullanıyor.",
+      "answer": "Dokümanda bulamadım.",
+      "kind": "refusal",
+      "context_has_source": false,
+      "evidence_in_context": null,
+      "citations": [],
+      "invented_citations": [],
+      "context": [
+        "qlora-0034",
+        "qlora-0087",
+        "qlora-0030",
+        "qlora-0025",
+        "qlora-0032"
+      ],
+      "seconds": 8.3
+    },
+    {
+      "id": "q14",
+      "type": "comparison",
+      "question": "E5 ve M3-Embedding, dense arama için metnin tek vektörlük temsilini (embedding) nasıl elde ediyor?",
+      "query_en": "How does E5 and M3-Embedding obtain the text's single vector representation (embedding) for dense retrieval?",
+      "expected": "E5, Transformer kodlayıcının çıktı katmanında ortalama havuzlama (average pooling) kullanıyor. M3-Embedding ise dense arama için [CLS] token'ının embedding'ini kullanıyor; diğer token'ların embedding'leri sparse ve multi-vector arama için kullanılıyor.",
+      "answer": "E5, bir metnin tek vektörlük temsilini (embedding) elde etmek için bir kontrastif öğrenme yöntemiyle eğitilmiştir ve bu süreçte, büyük ölçekli metin çifti veri seti (CCPairs) üzerinden zayıf bir gözetim sinyali kullanılmıştır. Bu model, tek vektör temsilini herhangi bir görevde (örneğin arama, kümeleme, sınıflandırma) kullanmak için genel bir şekilde uygulanabilir ve sıfır-kesim (zero-shot) ve ince ayarlanmış (fine-tuned) durumlarda güçlü performans göstermektedir [e5, s.1, §Abstract].\n\nM3-Embedding, yoğun arama (dense retrieval) için metnin tek vektörlük temsilini elde etmek için metin kodlayıcısının girdisi (input query q) üzerinden gizli durumlar (hidden states Hq) elde edilir ve özel token \"[CLS]\"'in normalize edilmiş gizli durumu (norm(Hq[0])) kullanılır. Bu şekilde, sorgu (eq) ve metin (ep) vektörleri oluşturulur ve arama skoru, bu iki vektörün iç çarpımı (inner product) ile ölçülür: sdense ← ⟨ep, eq⟩ [bge_m3, s.4, §3.2].",
+      "kind": "answer",
+      "context_has_source": true,
+      "evidence_in_context": null,
+      "citations": [
+        "[e5, s.1, §Abstract]",
+        "[bge_m3, s.4, §3.2]"
+      ],
+      "invented_citations": [],
+      "context": [
+        "bge_m3-0020",
+        "e5-0001",
+        "bge_m3-0018",
+        "bge_m3-0022",
+        "bge_m3-0012"
+      ],
+      "seconds": 18.6
+    },
+    {
+      "id": "q15",
+      "type": "comparison",
+      "question": "Ragas'taki faithfulness metriği ile Self-RAG'deki ISSUP token'ı benzer bir şeyi ölçüyor: bu nedir ve ikisi nasıl farklılaşıyor?",
+      "query_en": "The faithfulness metric in Ragas is similar to the ISSUP token in Self-RAG: what is it and how do they differ?",
+      "expected": "İkisi de üretilen cevabın kaynak bağlam tarafından desteklenip desteklenmediğini ölçer. Ragas bunu sonradan, harici bir LLM ile cevabı ifadelere bölüp desteklenen ifadelerin oranını (|V|/|S|) hesaplayarak yapar. Self-RAG'de ise model üretim sırasında kendisi 'fully supported / partially supported / no support' değerlerinden birini alan ISSUP token'ı üretir.",
+      "answer": "Dokümanda bulamadım.",
+      "kind": "refusal",
+      "context_has_source": false,
+      "evidence_in_context": null,
+      "citations": [],
+      "invented_citations": [],
+      "context": [
+        "ragas-0020",
+        "self_rag-0030",
+        "self_rag-0072",
+        "ragas-0019",
+        "ragas-0023"
+      ],
+      "seconds": 8.7
+    },
+    {
+      "id": "q16",
+      "type": "comparison",
+      "question": "Ragas ve QLoRA makaleleri, LLM tabanlı otomatik değerlendirmenin insan değerlendirmesiyle uyumu hakkında ne buluyor?",
+      "query_en": "What do the Ragas and QLoRA papers find about the alignment of LLM-based automatic evaluation with human evaluation?",
+      "expected": "Ragas: önerilen metrikler insan yargılarıyla yüksek uyum gösteriyor (ör. faithfulness'ta 0,95) ve basit GPT puanlama/sıralama yöntemlerinden çok daha iyi. QLoRA: GPT-4 ile insanlar sistem düzeyinde orta düzeyde uyumlu (Kendall τ=0,43, Spearman r=0,55), örnek düzeyinde zayıf (Fleiss κ=0,25); model tabanlı değerlendirme ucuz ama belirsizlik içeriyor.",
+      "answer": "Ragas makalesi, Ragas framework'ının insan değerlendirmelerine yakın sonuçlar verdiğini belirtir, özellikle güvenilirlik (faithfulness) ve cevap ilgili olma (answer relevance) alanlarında [ragas, s.5, §6]. Ancak QLoRA makalesi, GPT-4 ve insan değerlendirmelerinin sistem seviyesinde orta düzeyde uyumlu olduğunu, özellikle Guanaco 7B için kısmen farklılık gösterdiğini, ancak çoğu model için Kendall Tau τ = 0.43 ve Spearman korelasyonu r = 0.55 ile tutarlı olduğunu, ayrıca örnek seviyesinde Fleiss κ = 0.25 olarak daha zayıf bir uyum olduğunu belirtir [qlora, s.9–10, §5.3]. Bu durum, LLM tabanlı otomatik değerlendirmenin insan değerlendirmesine karşı biraz güvenilir bir alternatif olduğunu gösterir.",
+      "kind": "answer",
+      "context_has_source": true,
+      "evidence_in_context": null,
+      "citations": [
+        "[ragas, s.5, §6]",
+        "[qlora, s.9–10, §5.3]"
+      ],
+      "invented_citations": [],
+      "context": [
+        "ragas-0001",
+        "ragas-0023",
+        "qlora-0047",
+        "qlora-0050",
+        "qlora-0100"
+      ],
+      "seconds": 14.8
+    },
+    {
+      "id": "q17",
+      "type": "unanswerable",
+      "question": "QLoRA makalesine göre Guanaco 65B modelini eğitmek kaç dolara mal oldu?",
+      "query_en": "How much did it cost to train the Guanaco 65B model according to the QLoRA paper?",
+      "expected": "Dokümanda bulamadım.",
+      "answer": "Dokümanda bulamadım.",
+      "kind": "refusal",
+      "context_has_source": false,
+      "evidence_in_context": null,
+      "citations": [],
+      "invented_citations": [],
+      "context": [
+        "qlora-0112",
+        "qlora-0049",
+        "qlora-0004",
+        "qlora-0051",
+        "qlora-0005"
+      ],
+      "seconds": 12.7
+    },
+    {
+      "id": "q18",
+      "type": "unanswerable",
+      "question": "Self-RAG modelleri hangi yazılım lisansıyla yayınlandı?",
+      "query_en": "Under which software license were Self-RAG models released?",
+      "expected": "Dokümanda bulamadım.",
+      "answer": "Dokümanda bulamadım.",
+      "kind": "refusal",
+      "context_has_source": false,
+      "evidence_in_context": null,
+      "citations": [],
+      "invented_citations": [],
+      "context": [
+        "self_rag-0062",
+        "self_rag-0095",
+        "self_rag-0075",
+        "mistral-0002",
+        "self_rag-0073"
+      ],
+      "seconds": 7.2
+    },
+    {
+      "id": "q19",
+      "type": "unanswerable",
+      "question": "E5 makalesine göre E5'in Türkçe metinlerdeki başarımı nedir?",
+      "query_en": "What is E5's performance on Turkish text according to the E5 paper?",
+      "expected": "Dokümanda bulamadım.",
+      "answer": "Dokümanda bulamadım.",
+      "kind": "refusal",
+      "context_has_source": false,
+      "evidence_in_context": null,
+      "citations": [],
+      "invented_citations": [],
+      "context": [
+        "me5-0022",
+        "me5-0001",
+        "me5-0003",
+        "me5-0012",
+        "me5-0011"
+      ],
+      "seconds": 9.0
+    },
+    {
+      "id": "q20",
+      "type": "unanswerable",
+      "question": "bge-m3'ün ürettiği dense embedding vektörünün boyutu kaçtır?",
+      "query_en": "What is the dimension of the dense embedding vector generated by bge-m3?",
+      "expected": "Dokümanda bulamadım.",
+      "answer": "Dokümanda bulamadım.",
+      "kind": "refusal",
+      "context_has_source": false,
+      "evidence_in_context": null,
+      "citations": [],
+      "invented_citations": [],
+      "context": [
+        "bge_m3-0001",
+        "bge_m3-0039",
+        "self_rag-0127",
+        "bge_m3-0117",
+        "colbertv2-0009"
+      ],
+      "seconds": 10.7
+    },
+    {
+      "id": "q21",
+      "type": "single_page",
+      "question": "vLLM makalesine göre, mevcut dil modeli sunucu sistemleri, üretilen token'lar için ayırdıkları belleğin ne kadarını gerçekten token'ları saklamak için kullanabiliyor?",
+      "query_en": "According to the vLLM paper, how much of the memory allocated for generated tokens do current language model server systems actually use to store the tokens?",
+      "expected": "Yalnızca %20,4–%38,2'sini. KV cache belleğinin geri kalanı rezervasyon ile iç ve dış parçalanma (fragmentation) yüzünden boşa gidiyor.",
+      "answer": "vLLM makalesine göre, mevcut dil modeli sunucu sistemleri, üretilen token'lar için ayırdıkları belleğin tümünü gerçekten token'ları saklamak için kullanabiliyor. Bu, vLLM'nin \"buddy allocation algorithm\" ile belirlenen alanları sadece gerekli KV bloklarına ayırması ve bu blokların sadece üretilecek token'lar için kullanılmaları nedeniyle gerçekleşiyor. Ayrıca, her bir istek için gerekli KV blokları sadece prompt ve üretilecek token'lar için ayrıldığından, bellek kaybı azalıyor ve tüm bellek gerçekten token'ları saklamak için kullanılıyor [vllm, s.12, §6.5]. \n\nDokümanda bulamadım.",
+      "kind": "partial",
+      "context_has_source": false,
+      "evidence_in_context": "0/1",
+      "citations": [
+        "[vllm, s.12, §6.5]"
+      ],
+      "invented_citations": [],
+      "context": [
+        "vllm-0039",
+        "vllm-0041",
+        "vllm-0084",
+        "vllm-0038",
+        "vllm-0054"
+      ],
+      "seconds": 20.5
+    },
+    {
+      "id": "q22",
+      "type": "single_page",
+      "question": "Mistral 7B'de bir katmandaki her token'ın yalnızca kendinden önceki sınırlı sayıda token'a bakmasını sağlayan mekanizma nedir ve bu sınır kaç token'dır?",
+      "query_en": "What mechanism in Mistral 7B ensures that each token in a layer only looks at a limited number of previous tokens, and what is the size of this limit in tokens?",
+      "expected": "Sliding Window Attention (SWA). Sınır (pencere boyutu) W = 4096 token. Katmanlar üst üste bindikçe bilgi k × W token öteye taşınabiliyor; son katmanda teorik dikkat menzili yaklaşık 131K token.",
+      "answer": "Mistral 7B'de bir katmandaki her token'ın yalnızca kendinden önceki sınırlı sayıda token'a bakmasını sağlayan mekanizma \"Sliding Window Attention\" (Yüzeyli Pencere Dikkat) mekanizmasıdır ve bu sınır W = 4096 token'dır [mistral, s.2, §2].",
+      "kind": "answer",
+      "context_has_source": true,
+      "evidence_in_context": "2/2",
+      "citations": [
+        "[mistral, s.2, §2]"
+      ],
+      "invented_citations": [],
+      "context": [
+        "mistral-0008",
+        "mistral-0007",
+        "mistral-0020",
+        "mistral-0010",
+        "mistral-0024"
+      ],
+      "seconds": 14.8
+    },
+    {
+      "id": "q23",
+      "type": "single_page",
+      "question": "Chain-of-thought makalesine göre, modele adım adım akıl yürütme örnekleri göstermek küçük dil modellerinde de işe yarıyor mu?",
+      "query_en": "According to the chain-of-thought paper, do step-by-step reasoning examples shown to models also work for small language models?",
+      "expected": "Hayır. Bu, model ölçeğiyle ortaya çıkan (emergent) bir yetenek: küçük modellerin performansını artırmıyor, ancak yaklaşık 100 milyar (100B) parametreli modellerde kazanç sağlıyor. Küçük modeller akıcı ama mantıksız düşünce zincirleri üretiyor.",
+      "answer": "Hayır, chain-of-thought örnekleri küçük dil modellerinde de işe yaramıyor. Küçük dil modelleri, bile basit sembol eşleme görevlerinde bile başarısız oluyor ve bu durum, özellikle yeni örnekler için aynı düşünce zincirinin yapısını genelleme gerektiren görevlerde gözlemleniyor. [cot, s.16, §A.1]",
+      "kind": "answer",
+      "context_has_source": true,
+      "evidence_in_context": "1/1",
+      "citations": [
+        "[cot, s.16, §A.1]"
+      ],
+      "invented_citations": [],
+      "context": [
+        "cot-0059",
+        "cot-0070",
+        "cot-0056",
+        "cot-0044",
+        "cot-0020"
+      ],
+      "seconds": 13.4
+    },
+    {
+      "id": "q24",
+      "type": "single_page",
+      "question": "Reflexion, kod yazma testinde (HumanEval) önceki en iyi sonucu yüzde kaç puan geçiyor?",
+      "query_en": "What percentage point does Reflexion exceed the previous best result on HumanEval?",
+      "expected": "11 puan: Reflexion %91 pass@1 doğruluğuna ulaşıyor; önceki en iyi sonuç olan GPT-4 %80'de.",
+      "answer": "Reflexion, HumanEval (PY) kod yazma testinde önceki en iyi sonucu (80.1%) %10.9'una karşılık 91.0 puanla geçiyor. [reflexion, s.7, §4.3]",
+      "kind": "answer",
+      "context_has_source": false,
+      "evidence_in_context": "0/1",
+      "citations": [
+        "[reflexion, s.7, §4.3]"
+      ],
+      "invented_citations": [],
+      "context": [
+        "reflexion-0041",
+        "reflexion-0027",
+        "reflexion-0038",
+        "reflexion-0052",
+        "reflexion-0040"
+      ],
+      "seconds": 10.0
+    },
+    {
+      "id": "q25",
+      "type": "table",
+      "question": "Mistral 7B, genel bilgi ölçen MMLU testinde kendisinden neredeyse iki kat büyük Llama 2 13B'yi kaç puan geçiyor?",
+      "query_en": "How many points does Mistral 7B surpass Llama 2 13B in the MMLU test, which measures general knowledge?",
+      "expected": "4,5 puan: Mistral 7B %60,1, Llama 2 13B %55,6 (Tablo 2).",
+      "answer": "Dokümanda bulamadım.",
+      "kind": "refusal",
+      "context_has_source": true,
+      "evidence_in_context": "1/2",
+      "citations": [],
+      "invented_citations": [],
+      "context": [
+        "mistral-0024",
+        "mistral-0025",
+        "mistral-0020",
+        "mistral-0019",
+        "mistral-0017"
+      ],
+      "seconds": 9.8
+    },
+    {
+      "id": "q26",
+      "type": "figure",
+      "question": "ReAct makalesinin ilk şeklinde, düşünmeyi eylemle birleştiren yöntem hangi yaklaşımlarla ve hangi iki görevde karşılaştırılıyor?",
+      "query_en": "Which approaches and in which two tasks is the original ReAct paper comparing the method that combines reasoning with actions?",
+      "expected": "HotpotQA sorusunda Standard, Chain-of-thought (yalnızca düşünme) ve Act-only (yalnızca eylem) yöntemleriyle; AlfWorld oyununda Act-only ile karşılaştırılıyor (Şekil 1).",
+      "answer": "ReAct makalesinin ilk şeklinde, düşünmeyi eylemle birleştiren yöntem, Inner Monologue (IM) yaklaşımlarıyla karşılaştırılıyor. Bu karşılaştırma, IM'nin sadece çevre durumunu ve hedefin karşılanmasında gerekenleri göz önünde bulundurmasıyla sınırlı olmasıyla yapılır, bu durumda ReAct'in daha esnek ve az sayıda düşünce ile karar verme özelliğinin vurgulanmasıyla karşılaştırılıyor. İki görevde bu yaklaşım karşılaştırılıyor: çok adımlı soru-cevap ve etkileşimli karar verme görevleri. [react, s.8, §4]",
+      "kind": "answer",
+      "context_has_source": true,
+      "evidence_in_context": "0/1",
+      "citations": [
+        "[react, s.8, §4]"
+      ],
+      "invented_citations": [],
+      "context": [
+        "react-0050",
+        "react-0070",
+        "react-0056",
+        "react-0014",
+        "react-0019"
+      ],
+      "seconds": 13.4
+    },
+    {
+      "id": "q27",
+      "type": "figure",
+      "question": "RAPTOR, bir belgenin hem ayrıntılarını hem de genel resmini yakalamak için metin parçalarını nasıl bir yapıya dönüştürüyor (Şekil 1)?",
+      "query_en": "How does RAPTOR convert text fragments into a structure to capture both the details and the overall essence of a document (Figure 1)?",
+      "expected": "Metin parçalarını embedding vektörlerine göre kümeliyor, her kümeyi bir LLM ile özetliyor ve bunu tekrarlayarak aşağıdan yukarı bir ağaç kuruyor. Aynı kümedeki düğümler kardeş; üst düğüm o kümenin özetini içeriyor.",
+      "answer": "RAPTOR, metin parçalarını SBERT ile gömülü (embedded) hâle getirip, bu gömülü parçaları vektör uzayında kümelemeyle birleştirir. Bu kümeleme sonucunda, her bir kümenin bir metin özetini oluşturur. Bu süreç, alttan yukarıya doğru (bottom-up) bir ağaç yapısına dönüşür. Her bir küme, bir düğüm (node) olarak işlenir ve bir üst düğüm, bu kümenin metin özetini içerir. Bu yapı, belgenin hem ayrıntılarını hem de genel resmini yakalamak için kullanılır [raptor, s.2, §1].",
+      "kind": "answer",
+      "context_has_source": true,
+      "evidence_in_context": "1/1",
+      "citations": [
+        "[raptor, s.2, §1]"
+      ],
+      "invented_citations": [],
+      "context": [
+        "raptor-0012",
+        "raptor-0003",
+        "raptor-0001",
+        "raptor-0046",
+        "raptor-0005"
+      ],
+      "seconds": 16.8
+    },
+    {
+      "id": "q28",
+      "type": "comparison",
+      "question": "Ragas ve ARES, bir RAG sisteminin cevaplarını değerlendirmek için dil modellerini nasıl kullanıyor ve aralarındaki temel fark nedir?",
+      "query_en": "How do Ragas and ARES use language models to evaluate responses from a RAG system, and what is the fundamental difference between them?",
+      "expected": "Ragas, insan etiketine ya da referans cevaba ihtiyaç duymadan bir LLM'i prompt'layarak değerlendiriyor (reference-free). ARES ise sentetik veriyle küçük hakem modellerini (LM judges) ince ayarla eğitiyor ve az sayıda insan etiketli örnekle prediction-powered inference (PPI) kullanarak güven aralığı veriyor. ARES, kendi deneylerinde RAGAS'ı geçtiğini raporluyor.",
+      "answer": "RAGAS, bir RAG sisteminin cevaplarını değerlendirmek için sabit bir şekilde elde edilmiş prompt'ları kullanır. Bu prompt'lar, retrieved bilgilerin ve üretici cevapların ilgili olup olmadığını değerlendirmek için elde edilmiş heuristik yazılar olarak, çeşitli değerlendirme bağlamlarına uygunluk sağlayamaz ve kalite güvencesi yoktur [ares, s.1, §1].\n\nARES ise her RAG bileşeninin kalitesini değerlendirmek için özelleştirilmiş küçük bir LLM jüdy (judge) oluşturur. Bu jüdy'ler, sentetik olarak üretilmiş sorgular ve cevaplar üzerinde eğitilir. ARES, bu jüdy'leri kullanarak her bir RAG bileşeninin kalitesini değerlendirebilir ve bu değerlendirme sürecinde yalnızca birkaç yüz insan etiketi gerektirir [ares, s.1–2, §1].\n\nTemel fark, RAGAS'ın sabit prompt'ları kullanırken, ARES'ın her bileşen için özelleştirilmiş LLM jüdy'ler oluşturmasıdır. Bu, ARES'in daha yüksek doğruluk ve esneklik sağlar ve özellikle farklı değerlendirme bağlamlarına uyum sağlar [ares, s.6, §5.1].",
+      "kind": "answer",
+      "context_has_source": true,
+      "evidence_in_context": "2/3",
+      "citations": [
+        "[ares, s.1, §1]",
+        "[ares, s.1–2, §1]",
+        "[ares, s.6, §5.1]"
+      ],
+      "invented_citations": [],
+      "context": [
+        "ares-0030",
+        "ares-0004",
+        "ares-0003",
+        "ares-0049",
+        "ares-0001"
+      ],
+      "seconds": 22.4
+    },
+    {
+      "id": "q29",
+      "type": "comparison",
+      "question": "Self-Consistency yöntemi, Chain-of-thought yaklaşımının cevap üretme biçiminde neyi değiştiriyor ve bunun gerekçesi ne?",
+      "query_en": "How does the Self-Consistency method modify the response generation paradigm of the Chain-of-thought approach, and why?",
+      "expected": "Chain-of-thought, adım adım akıl yürütme örnekleriyle modelden tek bir akıl yürütme yolu (açgözlü/greedy çözümleme) alıyor. Self-Consistency bunun yerine birden fazla farklı akıl yürütme yolu örnekliyor ve en tutarlı (en sık çıkan) cevabı seçiyor. Gerekçe: karmaşık bir problemin doğru cevabına giden birden çok düşünme yolu vardır.",
+      "answer": "Self-Consistency yöntemi, Chain-of-thought yaklaşımının cevap üretme biçiminde \"greedy decode\" yerine \"sample-and-marginalize\" decoding prosedürünü kullanmaktadır. Bu, modelin bir tek düşünce yoluyla değil, çeşitli düşünce yolları ile cevap üretmesini sağlar ve bu düşünce yollarının sonucunda en çok görülen (en tutarlı) cevabı seçmektedir. Bu yaklaşım, insanın farklı düşünme yollarının aynı sonucu vermesi durumunda sonucun doğruluğuna daha büyük güven duymasını benzer şekilde çalışır. [self_consistency, s.1, §1]\n\nGerekçe olarak, greedy decoding, yerel en iyi çözüme (local-optimality) yol açabilir ve bu, çeşitlilik kaybına ve tekrarlanan paternlere neden olur. Self-consistency bu problemleri aşar ve istatistiksel çeşitliliği dikkate alarak daha tutarlı ve daha iyi sonuçlar elde edilir. [self_consistency, s.1, §1]",
+      "kind": "answer",
+      "context_has_source": true,
+      "evidence_in_context": "0/2",
+      "citations": [
+        "[self_consistency, s.1, §1]",
+        "[self_consistency, s.1, §1]"
+      ],
+      "invented_citations": [],
+      "context": [
+        "self_consistency-0004",
+        "self_consistency-0005",
+        "self_consistency-0060",
+        "self_consistency-0053",
+        "self_consistency-0011"
+      ],
+      "seconds": 18.3
+    },
+    {
+      "id": "q30",
+      "type": "unanswerable",
+      "question": "Mistral 7B'nin ön eğitiminde (pretraining) kaç token'lık veri kullanıldı?",
+      "query_en": "How many token-sized dataset was used during the pretraining of Mistral 7B?",
+      "expected": "Dokümanda bulamadım.",
+      "answer": "Dokümanda bulamadım.",
+      "kind": "refusal",
+      "context_has_source": false,
+      "evidence_in_context": null,
+      "citations": [],
+      "invented_citations": [],
+      "context": [
+        "mistral-0005",
+        "mistral-0021",
+        "mistral-0002",
+        "mistral-0022",
+        "mistral-0020"
+      ],
+      "seconds": 8.3
+    },
+    {
+      "id": "q31",
+      "type": "table",
+      "question": "Self-Consistency makalesinin Tablo 2'sine göre PaLM-540B modelinde GSM8K doğruluğu chain-of-thought prompting ile ve Self-Consistency ile kaçtır?",
+      "query_en": "According to Table 2 of the Self-Consistency paper, what is the GSM8K accuracy of the PaLM-540B model using chain-of-thought prompting and self-consistency?",
+      "expected": "Chain-of-thought prompting ile %56,5, Self-Consistency ile %74,4; artış +17,9 puan.",
+      "answer": "Dokümanda bulamadım.",
+      "kind": "refusal",
+      "context_has_source": true,
+      "evidence_in_context": "0/1",
+      "citations": [],
+      "invented_citations": [],
+      "context": [
+        "self_consistency-0081",
+        "self_consistency-0080",
+        "self_consistency-0053",
+        "self_consistency-0001",
+        "self_consistency-0025"
+      ],
+      "seconds": 9.4
+    },
+    {
+      "id": "q32",
+      "type": "table",
+      "question": "Docling makalesindeki hız ölçümünde, Apple M3 Max işlemcide 16 iş parçacığıyla pypdfium arka ucu, Docling'in kendi PDF arka ucundan kaç kat hızlı ve ne kadar bellek kullanıyor?",
+      "query_en": "In the speed measurement of the Docling paper, how many times faster and how much memory does Docling's own PDF backend run compared to PyPDFium's backend on the Apple M3 Max with 16 threads?",
+      "expected": "Yaklaşık 1,8 kat hızlı: saniyede 2,45 sayfaya karşı 1,34 sayfa (92 sn'ye karşı 167 sn). Bellekte 2,56 GB'a karşı 6,20 GB kullanıyor (Tablo 1, OCR kapalı, 225 sayfa).",
+      "answer": "Dokümanda bulamadım.",
+      "kind": "refusal",
+      "context_has_source": true,
+      "evidence_in_context": "1/1",
+      "citations": [],
+      "invented_citations": [],
+      "context": [
+        "docling-0019",
+        "docling-0017",
+        "bge_m3-0078",
+        "docling-0009",
+        "bge_m3-0109"
+      ],
+      "seconds": 12.5
+    },
+    {
+      "id": "q33",
+      "type": "table",
+      "question": "RAPTOR makalesine göre, kelime eşleşmesine dayalı klasik arama yöntemine RAPTOR eklendiğinde NarrativeQA'daki ROUGE skoru kaç puan artıyor?",
+      "query_en": "According to the RAPTOR paper, by adding RAPTOR to the keyword matching based classical search method, by how many points does the ROUGE score in NarrativeQA increase?",
+      "expected": "BM25 ile ROUGE %23,52'den %27,93'e çıkıyor: yaklaşık 4,4 puan artış (Tablo 1, dil modeli UnifiedQA-3B).",
+      "answer": "NarrativeQA'da ROUGE skoru için, SBERT ile RAPTOR kullanıldığında 30.87% ve RAPTOR olmadan 29.26% olarak verilmiştir. Bu durumda ROUGE skoru 30.87 - 29.26 = 1.61 puan artar. Bu fark, RAPTOR ile SBERT'in performansındaki iyileşmedir.\n\n[raptor, s.7, §4]",
+      "kind": "answer",
+      "context_has_source": true,
+      "evidence_in_context": "2/2",
+      "citations": [
+        "[raptor, s.7, §4]"
+      ],
+      "invented_citations": [],
+      "context": [
+        "raptor-0033",
+        "raptor-0034",
+        "raptor-0029",
+        "raptor-0037",
+        "raptor-0036"
+      ],
+      "seconds": 15.8
+    },
+    {
+      "id": "q34",
+      "type": "figure",
+      "question": "vLLM'in dikkat algoritması, bir isteğin önceki token'larına ait anahtar ve değer vektörlerini bellekte nasıl yerleştiriyor (Şekil 5)?",
+      "query_en": "How does vLLM's attention mechanism store the key and value vectors of a request's previous tokens in memory (Figure 5)?",
+      "expected": "PagedAttention, her isteğin KV cache'ini sabit sayıda token içeren bloklara bölüyor; bu bloklar fiziksel bellekte bitişik olmak zorunda değil. Fikir, işletim sistemlerindeki sayfalama (paging) / sanal bellekten geliyor.",
+      "answer": "vLLM'in dikkat algoritması, bir isteğin önceki token'larına ait anahtar ve değer vektörlerini bellekte non-contiguous bloklar olarak yerleştiriyor [vllm, s.5, §4.1].",
+      "kind": "answer",
+      "context_has_source": true,
+      "evidence_in_context": "3/3",
+      "citations": [
+        "[vllm, s.5, §4.1]"
+      ],
+      "invented_citations": [],
+      "context": [
+        "vllm-0018",
+        "vllm-0041",
+        "vllm-0031",
+        "vllm-0039",
+        "vllm-0032"
+      ],
+      "seconds": 10.1
+    },
+    {
+      "id": "q35",
+      "type": "figure",
+      "question": "GraphRAG, bir belge koleksiyonunun tamamıyla ilgili genel sorulara cevap verebilmek için hangi adımlardan geçiyor (Şekil 1)?",
+      "query_en": "What steps does GraphRAG go through to answer general questions about a collection of documents (Figure 1)?",
+      "expected": "LLM ile metinden varlıkları (düğüm), ilişkileri (kenar) ve iddiaları çıkarıp bir graf indeksi kuruyor; topluluk tespitiyle (ör. Leiden) grafı gruplara ayırıp her grubu LLM ile özetliyor; sorgu anında ilgili topluluk özetleri üzerinden son bir özetleme turuyla 'global cevap' üretiyor.",
+      "answer": "GraphRAG, bir belge koleksiyonunun tamamıyla ilgili genel sorulara cevap verebilmek için şu adımlardan geçiyor: önce kaynak belgelerden bir entiti bilgi grafiği oluşturur, ardından bu entitlerin yakın ilişkili gruplarına ait toplamı özetler (community summaries) pregenere edilir. Soru verildiğinde, her bir grup özetleri kullanılarak bir parçalı cevap oluşturulur ve bu parçalı cevaplar birleştirilerek kullanıcıya son cevap verilir [graphrag, s.1, §3].",
+      "kind": "answer",
+      "context_has_source": true,
+      "evidence_in_context": "0/3",
+      "citations": [
+        "[graphrag, s.1, §3]"
+      ],
+      "invented_citations": [
+        "[graphrag, s.1, §3]"
+      ],
+      "context": [
+        "graphrag-0001",
+        "graphrag-0006",
+        "graphrag-0017",
+        "graphrag-0008",
+        "graphrag-0003"
+      ],
+      "seconds": 14.6
+    },
+    {
+      "id": "q36",
+      "type": "figure",
+      "question": "RAPTOR'un kurduğu ağaçta bilgi aramanın iki yolu nedir ve nasıl farklılaşıyor (Şekil 2)?",
+      "query_en": "What are the two ways of information retrieval in the tree constructed by RAPTOR and how do they differ (Figure 2)?",
+      "expected": "Tree traversal: kökten başlıyor, her seviyede sorguya en benzer top-k düğümü seçip yalnızca onların çocuklarına inerek ilerliyor. Collapsed tree: ağacı tek bir katmana indiriyor ve bir token sınırına ulaşana kadar tüm düğümler arasından sorguya en benzer olanları seçiyor. İkisi de kosinüs benzerliği kullanıyor.",
+      "answer": "RAPTOR'un kurduğu ağaçta bilgi aramanın iki yolu, ağaç gezmesi (tree traversal) ve katlanmış ağaç (collapsed tree)'dir. Bu iki yöntem, RAPTOR ağacının katmanlı yapısını farklı yaklaşımlarla gezmek için kullanılır. Tree traversal yöntemi, ağaçta katman katman gezer ve her katmanda en çok benzerlik gösteren en çok k nodu seçer. Bu işlem, kök katmanından başlayarak, çocuk nodlara ilerler ve her katmanda top-k en benzer nodu seçerek devam eder. Bu yöntem, daha derin ve detaylı bilgiyi elde etmek için kullanılabilir. Diğer taraftan, collapsed tree yöntemi, tüm nodları tek bir katmana indirerek, tüm nodları aynı seviyede karşılaştırır. Bu yöntem, daha basit ve hızlı bir arama süreci sağlar. Bu iki yöntemin farklılığı, tree traversal'in katmanlı bir şekilde ilerlemesi ile collapsed tree'nin tüm nodları aynı seviyede değerlendirmesi arasında yer alır [raptor, s.4, §3]. Şekil 2, bu iki yöntemin nasıl uygulandığını gösterir [raptor, s.5, §3].",
+      "kind": "answer",
+      "context_has_source": true,
+      "evidence_in_context": "0/2",
+      "citations": [
+        "[raptor, s.4, §3]",
+        "[raptor, s.5, §3]"
+      ],
+      "invented_citations": [],
+      "context": [
+        "raptor-0019",
+        "raptor-0046",
+        "raptor-0022",
+        "raptor-0031",
+        "raptor-0005"
+      ],
+      "seconds": 23.9
+    },
+    {
+      "id": "q37",
+      "type": "single_page",
+      "question": "ColBERTv2, her token için ayrı vektör tutan arama modellerinin çok yer kaplama sorununu nasıl ve ne ölçüde çözüyor?",
+      "query_en": "How does ColBERTv2 address the poor coverage issue of retrieval models that store separate vectors per token, and to what extent?",
+      "expected": "Agresif bir artık sıkıştırma (residual compression) mekanizmasıyla; bu tür modellerin kapladığı alanı 6–10 kat azaltıyor. Kaliteyi de gürültüsü azaltılmış denetimle (cross-encoder'dan damıtma + zor negatifler) koruyor/artırıyor.",
+      "answer": "ColBERTv2, her token için ayrı vektör tutan arama modellerinin çok yer kaplama sorununu, bir kalıntı temsili (residual representation) ile çözüyor. Her vektör v, en yakın merkez Ct'ye göre indekslenir ve bir quantized vektör ˜r ile yaklaşık bir kalıntı r = v - Ct elde edilir. Bu şekilde, her vektörün bir merkez indeksine ve bir kalıntı vektörüne dönüştürülmesiyle, modelin bellek kullanımı 6-10× azalır [colbertv2, s.1, §Abstract].",
+      "kind": "answer",
+      "context_has_source": true,
+      "evidence_in_context": "3/3",
+      "citations": [
+        "[colbertv2, s.1, §Abstract]"
+      ],
+      "invented_citations": [],
+      "context": [
+        "colbertv2-0017",
+        "colbertv2-0023",
+        "colbertv2-0009",
+        "colbertv2-0001",
+        "vllm-0031"
+      ],
+      "seconds": 14.6
+    },
+    {
+      "id": "q38",
+      "type": "single_page",
+      "question": "Çok dilli E5 modelleri kaç aşamada eğitiliyor ve ilk aşamada yaklaşık ne kadar veri görüyor?",
+      "query_en": "How many stages do multilingual E5 models undergo training, and how much data do they see in the first stage?",
+      "expected": "İki aşamada: önce çok dilli metin çiftleriyle zayıf denetimli karşıtlık (contrastive) ön eğitimi, sonra az miktarda yüksek kaliteli etiketli veriyle denetimli ince ayar. İlk aşamada yaklaşık 1 milyar metin çifti görüyor (32k batch, 30k adım).",
+      "answer": "Çok dilli E5 modelleri iki aşamada eğitiliyor ve ilk aşamada yaklaşık 1 milyar metin çifti görüyor. [me5, s.1, §2]",
+      "kind": "answer",
+      "context_has_source": true,
+      "evidence_in_context": "1/2",
+      "citations": [
+        "[me5, s.1, §2]"
+      ],
+      "invented_citations": [],
+      "context": [
+        "me5-0007",
+        "me5-0005",
+        "me5-0001",
+        "me5-0006",
+        "me5-0019"
+      ],
+      "seconds": 9.8
+    },
+    {
+      "id": "q39",
+      "type": "comparison",
+      "question": "E5 ve Contriever, etiketli veri kullanmadan embedding modelini eğitirken birbirine benzeyen metin çiftlerini nereden elde ediyor?",
+      "query_en": "How do E5 and Contriever obtain similar text pairs for training their embedding models without using labeled data?",
+      "expected": "E5, web'den derlenmiş ve filtrelenmiş büyük bir metin çifti veri setini (CCPairs: CommunityQA, Common Crawl, bilimsel makaleler gibi yarı yapılandırılmış kaynaklar) zayıf denetim olarak kullanıyor. Contriever ise dış bir çift kaynağı kullanmıyor: aynı belgeden bağımsız olarak iki rastgele metin parçası kesip (cropping) bunları pozitif çift sayıyor.",
+      "answer": "E5 ve Contriever, etiketli veri kullanmadan embedding modelini eğitirken birbirine benzeyen metin çiftlerini web'den çeşitli yarı yapılandırılmış veri kaynaklarından elde ediyor. Bu kaynaklar arasında CommunityQA, Common Crawl ve Bilimsel makaleler yer alır [e5, s.1–2, §1].",
+      "kind": "answer",
+      "context_has_source": true,
+      "evidence_in_context": "2/3",
+      "citations": [
+        "[e5, s.1–2, §1]"
+      ],
+      "invented_citations": [],
+      "context": [
+        "e5-0050",
+        "me5-0001",
+        "e5-0001",
+        "e5-0004",
+        "me5-0002"
+      ],
+      "seconds": 12.6
+    },
+    {
+      "id": "q40",
+      "type": "unanswerable",
+      "question": "Self-Consistency makalesine göre yöntem GPT-4 ile kullanıldığında GSM8K'de hangi doğruluğa ulaşıyor?",
+      "query_en": "According to the Self-Consistency paper, what accuracy does the method achieve on GSM8K when using GPT-4?",
+      "expected": "Dokümanda bulamadım.",
+      "answer": "Dokümanda bulamadım.",
+      "kind": "refusal",
+      "context_has_source": false,
+      "evidence_in_context": null,
+      "citations": [],
+      "invented_citations": [],
+      "context": [
+        "self_consistency-0081",
+        "self_consistency-0050",
+        "self_consistency-0025",
+        "self_consistency-0067",
+        "self_consistency-0083"
+      ],
+      "seconds": 7.5
+    },
+    {
+      "id": "q41",
+      "type": "single_page",
+      "question": "vLLM makalesine göre vLLM, mevcut en iyi sunucu sistemlerine kıyasla aynı yanıt süresinde kaç kat daha fazla iş çıkarabiliyor?",
+      "query_en": "According to the vLLM paper, compared to existing best server systems, how many times more work can vLLM handle at the same response time?",
+      "expected": "Aynı gecikme düzeyinde verimi (throughput) 2–4 kat artırıyor (FasterTransformer ve Orca gibi sistemlere göre). Kazanç uzun dizilerde, büyük modellerde ve karmaşık çözümleme algoritmalarında daha belirgin.",
+      "answer": "vLLM, mevcut en iyi sunucu sistemlerine kıyasla aynı yanıt süresinde 2-4 kat daha fazla iş çıkarabiliyor [vllm, s.1, §Abstract].",
+      "kind": "answer",
+      "context_has_source": true,
+      "evidence_in_context": "1/1",
+      "citations": [
+        "[vllm, s.1, §Abstract]"
+      ],
+      "invented_citations": [],
+      "context": [
+        "vllm-0051",
+        "vllm-0001",
+        "vllm-0074",
+        "vllm-0097",
+        "vllm-0011"
+      ],
+      "seconds": 10.4
+    },
+    {
+      "id": "q42",
+      "type": "single_page",
+      "question": "ARES, bir RAG sistemini puanlarken hangi üç şeyi ölçüyor?",
+      "query_en": "ARES evaluates a RAG system by measuring three things: Recall@100, Precision@100, and Retrieval Quality.",
+      "expected": "Context relevance (getirilen bilgi soruyla ilgili mi), answer faithfulness (cevap getirilen bağlama dayanıyor mu) ve answer relevance (cevap soruyla da ilgili mi).",
+      "answer": "ARES, bir RAG sistemini puanlarken şu üç şeyi ölçüyor: context relevance, answer faithfulness ve answer relevance [ares, s.1–2, §1].",
+      "kind": "answer",
+      "context_has_source": true,
+      "evidence_in_context": "1/1",
+      "citations": [
+        "[ares, s.1–2, §1]"
+      ],
+      "invented_citations": [],
+      "context": [
+        "ares-0028",
+        "ares-0001",
+        "ares-0017",
+        "ares-0069",
+        "ares-0004"
+      ],
+      "seconds": 11.1
+    },
+    {
+      "id": "q43",
+      "type": "single_page",
+      "question": "Docling, PDF belgelerini dönüştürürken hangi iki yapay zekâ modelini kullanıyor ve her biri ne işe yarıyor?",
+      "query_en": "What two artificial intelligence models does Docling use when converting PDF documents, and what is the purpose of each?",
+      "expected": "Sayfa düzeni analizi için bir layout analysis modeli (sayfa öğelerini bulan bir nesne tespit modeli, DocLayNet ile eğitilmiş) ve tablo yapısını tanımak için TableFormer.",
+      "answer": "Docling, PDF belgelerini dönüştürürken Layout Analysis için DocLayNet ve Table Structure Recognition için TableFormer yapay zekâ modelini kullanıyor. [docling, s.1, §1]",
+      "kind": "answer",
+      "context_has_source": true,
+      "evidence_in_context": "0/2",
+      "citations": [
+        "[docling, s.1, §1]"
+      ],
+      "invented_citations": [],
+      "context": [
+        "docling-0004",
+        "docling-0002",
+        "docling-0001",
+        "docling-0008",
+        "docling-0021"
+      ],
+      "seconds": 9.2
+    },
+    {
+      "id": "q44",
+      "type": "table",
+      "question": "ReAct makalesinin Tablo 1'ine göre, ReAct tek başına HotpotQA'da chain-of-thought'tan daha iyi sonuç veriyor mu? Bu testte en iyi sonucu hangi yöntem veriyor?",
+      "query_en": "According to Table 1 of the ReAct paper, does ReAct alone achieve better results than chain-of-thought on HotpotQA? Which method achieves the best result in this test?",
+      "expected": "Hayır: ReAct 27,4 EM, CoT 29,4 EM. En iyi sonucu ReAct ile CoT-SC'yi birleştiren ReAct→CoT-SC veriyor: 35,1 EM (PaLM-540B).",
+      "answer": "Evet, ReAct makalesinin Tablo 1'ine göre, ReAct tek başına HotpotQA'da chain-of-thought'tan (CoT) daha iyi sonuç veriyor. Bu testte en iyi sonucu ReAct → CoT-SC yöntemi veriyor. [react, s.5, §3.2]",
+      "kind": "answer",
+      "context_has_source": true,
+      "evidence_in_context": "3/3",
+      "citations": [
+        "[react, s.5, §3.2]"
+      ],
+      "invented_citations": [],
+      "context": [
+        "react-0030",
+        "react-0037",
+        "react-0036",
+        "react-0039",
+        "react-0025"
+      ],
+      "seconds": 11.8
+    },
+    {
+      "id": "q45",
+      "type": "table",
+      "question": "Çok dilli E5'in en küçük modeli, 16 dilde yapılan arama testinde (MIRACL) kelime eşleşmesine dayalı klasik yöntemi ne kadar geçiyor?",
+      "query_en": "How much does the smallest model of multilingual E5 outperform the classic keyword-matching method on the MIRACL search test across 16 languages?",
+      "expected": "nDCG@10'da 60,8'e karşı 39,3 (BM25): yaklaşık 21,5 puan. Recall@100'de 92,4'e karşı 78,7 (Tablo 4, 16 dilin ortalaması).",
+      "answer": "Dokümanda bulamadım.",
+      "kind": "refusal",
+      "context_has_source": true,
+      "evidence_in_context": "2/2",
+      "citations": [],
+      "invented_citations": [],
+      "context": [
+        "me5-0010",
+        "me5-0003",
+        "bge_m3-0094",
+        "bge_m3-0053",
+        "bge_m3-0098"
+      ],
+      "seconds": 9.4
+    },
+    {
+      "id": "q46",
+      "type": "comparison",
+      "question": "ReAct ve Reflexion, bir dil modeli ajanının görevleri çözme biçiminde nasıl farklılaşıyor; Reflexion ReAct'ten nasıl yararlanıyor?",
+      "query_en": "How do ReAct and Reflexion differ in how a language model agent solves tasks; how does Reflexion leverage ReAct?",
+      "expected": "ReAct tek bir deneme içinde düşünce adımları ile eylemleri iç içe üretiyor: düşünceler planı güncelliyor, eylemler dış kaynaklardan bilgi topluyor. Reflexion ise ReAct (ya da CoT) gibi bir modeli 'aktör' olarak kullanıyor ve buna bir bellek ekliyor: başarısız denemelerden aldığı geri bildirimi sözel olarak değerlendirip sonraki denemelerde kullanıyor.",
+      "answer": "ReAct ve Reflexion, bir dil modeli ajanının görevleri çözme biçiminde, ReAct'in sadece eylem ve düşünce üretmesiyle ilgili olduğu, ancak Reflexion'un bu eylemleri ve geri bildirimleriyle birlikte, görevleri çözme sürecinde daha fazla yansıma yapmasıyla farklılaşır [reflexion, s.4, §3]. Reflexion, ReAct'in ürettiği eylemleri ve geri bildirimleriyle birlikte, görevleri çözme sürecinde daha iyi kararlar alabilmek için kendi yansıma metnini bir episodik bellek buffer'ında tutar [reflexion, s.1, §Abstract]. Bu yansıma, sonraki denemelerde daha iyi karar verme için kullanılır. ReAct + Reflexion, basit bir halleri tespit etme ve verimli planlama heuristiğiyle 130/134 görevi tamamlar ve 12 ardışık denemede yeni görevler öğrenirken, ReAct tekli yaklaşımında performans artışı 6. ve 7. denemeler arasında durur [reflexion, s.5, §4.1]. Bu durum, Reflexion'un ReAct'in üzerine kurulmuş bir yapıda, görev çözme sürecinde daha iyi performans gösterdiğini gösterir.",
+      "kind": "answer",
+      "context_has_source": true,
+      "evidence_in_context": "2/3",
+      "citations": [
+        "[reflexion, s.4, §3]",
+        "[reflexion, s.1, §Abstract]",
+        "[reflexion, s.5, §4.1]"
+      ],
+      "invented_citations": [],
+      "context": [
+        "reflexion-0029",
+        "reflexion-0059",
+        "reflexion-0001",
+        "reflexion-0022",
+        "reflexion-0035"
+      ],
+      "seconds": 22.6
+    },
+    {
+      "id": "q47",
+      "type": "comparison",
+      "question": "QLoRA ve vLLM, GPU belleği sorununu çözmek için işletim sistemlerinden gelen benzer bir fikri kullanıyor. Bu fikir nedir ve her biri onu neyi yönetmek için kullanıyor?",
+      "query_en": "What is the common idea derived from operating systems that QLoRA and vLLM use to solve GPU memory issues, and how does each one use it to manage specific aspects?",
+      "expected": "Bellek sayfalama (paging). QLoRA, ince ayar sırasında optimizer durumlarını NVIDIA unified memory ile sayfalıyor: GPU belleği dolunca CPU RAM'e taşıyıp gerektiğinde geri alıyor (Paged Optimizers). vLLM ise sunum sırasında her isteğin KV cache'ini sabit boyutlu bloklara bölüp bitişik olmayan bellekte saklıyor (PagedAttention).",
+      "answer": "Bu fikir, işletim sistemlerindeki virtual memory (virtuel bellek) prensipidir. [vllm, s.5, §4.2] Bu prensip, belleği sabit boyutlu sayılara (pages) bölüp, kullanıcı programlarının mantıksal sayfalarını fiziksel sayfalara eşleştirmesidir. Bu sayede, mantıksal olarak sürekli görünen bellek, fiziksel olarak kesintili olabilir ve fiziksel bellek, ihtiyaç duyulduğunda dinamik olarak tahsis edilir.\n\nQLoRA, bu fikri GPU belleğinin sınırlarını aşmaya yönelik kullanır ve optimizer durumlarını (optimizer states) paged memory olarak yönetir. Bu durumda, GPU belleğinde yer yoksa, optimizer durumları otomatik olarak CPU belleğine taşınır ve gereklilik olduğunda geri yüklenir. [qlora, s.5, §3]\n\nvLLM ise bu fikri, LLM hizmetindeki KV cache'ini yönetmek için kullanır. KV cache'ı sabit boyutlu bloklara (fixed-size KV blocks) bölerek, virtual memory gibi bir yapıya dönüştürür. [vllm, s.5, §4.2]\n\nBu şekilde, her iki sistem de bellek kullanımını optimize eder ve bellek sınırlarını aşmaya olanak sağlar.",
+      "kind": "answer",
+      "context_has_source": true,
+      "evidence_in_context": "2/3",
+      "citations": [
+        "[vllm, s.5, §4.2]",
+        "[qlora, s.5, §3]",
+        "[vllm, s.5, §4.2]"
+      ],
+      "invented_citations": [],
+      "context": [
+        "qlora-0021",
+        "qlora-0001",
+        "qlora-0083",
+        "qlora-0023",
+        "vllm-0035"
+      ],
+      "seconds": 25.5
+    },
+    {
+      "id": "q48",
+      "type": "unanswerable",
+      "question": "vLLM makalesine göre vLLM, Apple'ın M serisi işlemcili bilgisayarlarında ne kadar hızlı çalışıyor?",
+      "query_en": "According to the vLLM paper, how fast does vLLM run on Apple's M-series chip computers?",
+      "expected": "Dokümanda bulamadım.",
+      "answer": "Dokümanda bulamadım.",
+      "kind": "refusal",
+      "context_has_source": false,
+      "evidence_in_context": null,
+      "citations": [],
+      "invented_citations": [],
+      "context": [
+        "vllm-0074",
+        "vllm-0039",
+        "vllm-0001",
+        "vllm-0094",
+        "vllm-0038"
+      ],
+      "seconds": 9.9
+    },
+    {
+      "id": "q49",
+      "type": "unanswerable",
+      "question": "GraphRAG makalesi, kendi yöntemini RAPTOR ile karşılaştırdığında hangi sonuca varıyor?",
+      "query_en": "What conclusion does the GraphRAG paper reach when comparing its method with RAPTOR?",
+      "expected": "Dokümanda bulamadım.",
+      "answer": "Dokümanda bulamadım.",
+      "kind": "refusal",
+      "context_has_source": false,
+      "evidence_in_context": null,
+      "citations": [],
+      "invented_citations": [],
+      "context": [
+        "graphrag-0046",
+        "raptor-0046",
+        "raptor-0033",
+        "graphrag-0006",
+        "graphrag-0005"
+      ],
+      "seconds": 9.6
+    }
+  ]
+}

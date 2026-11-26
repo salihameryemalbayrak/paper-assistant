@@ -33,6 +33,7 @@ from app.config import get_settings
 from app.llm import get_chat_model
 from app.rerank import RERANKERS
 from app.retrieval import (
+    BRANCHES,
     RETRIEVERS,
     Query,
     build_retriever,
@@ -96,10 +97,16 @@ def reranker_counts(reranker: str) -> dict | None:
 
 
 def run_fast(
-    model: str, retriever_name: str = "dense", reranker: str = "", candidates: int = 20
+    model: str,
+    retriever_name: str = "dense",
+    reranker: str = "",
+    candidates: int = 20,
+    depth: int = 20,
 ) -> dict:
     items = load_dataset(DATASET)
-    retriever = build_retriever(retriever_name, TOP_K, model, reranker, candidates)
+    depth = max(depth, TOP_K)  # what build_retriever really uses; record that, not the request
+    retriever = build_retriever(retriever_name, TOP_K, model, reranker, candidates, depth)
+    multi = len(BRANCHES[retriever_name]) > 1  # depth only changes fused variants
 
     # Translated variants read the reviewed, stored translations: no LLM call, so the
     # timings below exclude translation (measured separately by eval.translations).
@@ -153,8 +160,10 @@ def run_fast(
             if uses_dense(retriever_name)
             else retriever_name
         )
+        + (f"_depth{depth}" if multi else "")
         + (f"_rerank_{reranker}" if reranker else ""),
         "retriever": retriever_name,
+        "retrieval_depth": depth if multi else None,
         "reranker": RERANKERS[reranker][0] if reranker else None,
         "rerank_candidates": candidates if reranker else None,
         "reranker_counts": reranker_counts(reranker),  # incl. the warm-up query
@@ -218,7 +227,9 @@ def run_answers(model: str) -> dict:
     items = load_dataset(DATASET)
     llm = get_chat_model(settings)
     reranker, candidates = settings.reranker, settings.rerank_candidates
-    retriever = build_retriever(settings.retriever, CONTEXT_K, model, reranker, candidates)
+    depth = settings.retrieval_depth
+    retriever = build_retriever(settings.retriever, CONTEXT_K, model, reranker, candidates, depth)
+    multi = len(BRANCHES[settings.retriever]) > 1
     # Live translation here: the answer eval measures the whole system, translation included.
     translator = build_translator(llm) if needs_translation(settings.retriever, reranker) else None
     chain = build_chain(retriever, llm, translator)
@@ -266,6 +277,7 @@ def run_answers(model: str) -> dict:
         "retriever": settings.retriever,
         "reranker": RERANKERS[reranker][0] if reranker else None,
         "reranker_counts": reranker_counts(reranker),
+        "retrieval_depth": depth if multi else None,
         "retrieval": f"{settings.retriever}, "
         f"{describe_query(settings.retriever, 'live, same LLM', reranker)}"
         f"{describe_reranker(reranker, candidates)}, context_k={CONTEXT_K}",
@@ -329,6 +341,9 @@ def main() -> None:
     )
     parser.add_argument("--reranker", choices=tuple(RERANKERS), default="", help="for --fast")
     parser.add_argument("--candidates", type=int, default=20, help="chunks given to the reranker")
+    parser.add_argument(
+        "--depth", type=int, default=None, help="results per branch before fusion (RETRIEVAL_DEPTH)"
+    )
     args = parser.parse_args()
 
     model = args.model or get_settings().embedding_model
@@ -341,14 +356,16 @@ def main() -> None:
         ANSWERS_DIR.mkdir(parents=True, exist_ok=True)
         slug = re.sub(r"[^a-z0-9]+", "_", get_settings().llm_model.lower()).strip("_")
         rerank = f"_rerank_{get_settings().reranker}" if get_settings().reranker else ""
+        depth = f"_depth{result['retrieval_depth']}" if result["retrieval_depth"] else ""
         docs = f"{result['corpus']['docs']}docs"
-        name = f"{result['date'][:10]}_{docs}_{result['retriever']}{rerank}_{slug}.json"
+        name = f"{result['date'][:10]}_{docs}_{result['retriever']}{depth}{rerank}_{slug}.json"
         out = unique_path(ANSWERS_DIR / name)
         out.write_text(json.dumps(result, indent=2, ensure_ascii=False) + "\n", encoding="utf-8")
         print(f"saved -> {out}")
         return
 
-    result = run_fast(model, args.retriever, args.reranker, args.candidates)
+    depth = args.depth or get_settings().retrieval_depth
+    result = run_fast(model, args.retriever, args.reranker, args.candidates, depth)
     print_summary(result)
 
     RESULTS_DIR.mkdir(parents=True, exist_ok=True)

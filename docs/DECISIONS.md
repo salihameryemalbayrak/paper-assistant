@@ -602,3 +602,43 @@ Her karar için:
   - Örnek: q31'in ve q44'ün gereken satırları hızlı eval'de ilk 5'te (1/1, 3/3), cevap eval'inde LLM'in bağlamında yoktu (D36).
   - Yani şimdiye kadarki R@5 değerleri, LLM'e giden 5 chunk'ı tam olarak ölçmüyordu. (Tek motorlu varyantlarda fark yok; ilk 5 aynı.)
 - **Önerilen düzeltme (ölçülecek):** Kol derinliğini k'dan ayırmak (ör. her kol 20 sonuç, birleştirmeden sonra k). Hızlı eval ile cevap zinciri aynı derinliği kullanır, ölçülen ile LLM'in gördüğü aynı olur. Derin listelerde RRF'nin uzlaşma sinyali de daha güçlü.
+
+### D38. Kol derinliği 20: LLM'e giden kanıt arttı, doğru cevap sayısı değişmedi
+- **Değişiklik:** `RETRIEVAL_DEPTH` (varsayılan 20). Her kol 20 sonuç getiriyor, RRF birleştiriyor, sonuç k'ya kesiliyor. Reranker açıkken derinlik en az aday sayısı kadar.
+  - Tek kollu varyantlarda sonuç değişmiyor.
+  - Çok kollu varyantların sonuç dosyası adında `_depth20` var.
+- **Neden:** Hızlı eval (k=10) ile cevap zinciri (k=5) farklı "ilk 5" görüyordu (D37). Artık ikisi de aynı derinliği kullanıyor; hızlı eval LLM'in gördüğü bağlamı ölçüyor.
+- **Açıklamanın doğrulanması:** Cevap zincirinin eski kurulumu (k=5, derinlik 5) yeniden çalıştırıldı. q31 ve q44'ün satırları bağlamda yok; D36'daki cevap eval'iyle birebir aynı.
+- **Hızlı eval** (`dense_tr_bm25_en`, k=10, 41 cevaplanabilir / 25 kanıtlı soru):
+
+| Derinlik | Sayfa R@5 | R@10 | MRR | Evidence recall@5 | Evidence complete@5 |
+|---|---|---|---|---|---|
+| 10 | 0,671 | 0,768 | 0,491 | 0,540 | 0,400 |
+| **20** | 0,768 | 0,866 | 0,509 | **0,587** | **0,440** |
+| 50 | 0,780 | 0,878 | 0,520 | 0,533 | 0,360 |
+
+  - Derinlik 20 ölçümden önce seçilmişti. 50 sayfa düzeyinde biraz daha iyi, ama chunk düzeyinde kötü: daha derin listeler daha çok gürültü de getiriyor.
+  - Hızlı eval k=10 kullandığı için "derinlik 5" ölçülemedi (`max(depth, k)`); bu karşılaştırma doğrudan cevap zinciriyle yapıldı.
+- **Cevap eval** (qwen3:4b-instruct, bağlamda 5 chunk, Apple M4):
+
+| | Derinlik 5 (D36) | Derinlik 20 |
+|---|---|---|
+| LLM bağlamında kanıt: recall / complete | 0,447 / 0,280 | **0,587 / 0,440** |
+| Doğru reddetme | 8/8 | 8/8 |
+| Doğru cevap (elle) | 24/41 | **24/41** |
+| Gecikme (ortanca) | 8,5 sn | 10,1 sn |
+
+  - Değişen sorular:
+    - Kazanılan: q02, q46.
+    - Kaybedilen: q11, q13 (reddediyor; q13'te kaynak bağlamdan düştü).
+  - 49 cevabın 29'u değişti; 20'si aynı.
+  - Gecikme artışının nedeni ölçülmedi (bağlam yine 5 chunk).
+- **Sonuç: darboğaz artık LLM'in okuması.**
+  - q44: Gereken 3 satırın üçü de bağlamda, model yine "ReAct daha iyi" diyor (27,4 < 29,4).
+  - q33: İki satır da bağlamda, model yine SBERT satırını okuyor.
+  - Arama tarafındaki iyileştirmeler 4B modelle cevaba yansımıyor. Daha büyük model (Aşama 9) ya da tabloları satır satır metne çevirmek (D36) ölçülecek.
+- **Karar:** Derinlik 20 kalıyor. Gerekçeler:
+  1. Ölçüm doğruluğu: hızlı eval ile LLM'in bağlamı aynı.
+  2. Chunk düzeyinde gerçek kazanç.
+  3. Cevaplarda kayıp yok.
+- **Yan gözlem:** q01'in cevabında Çince bir kelime var ("检索" = retrieval). Qwen modeli zaman zaman Çince token sızdırıyor.

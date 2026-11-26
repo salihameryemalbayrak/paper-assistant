@@ -33,6 +33,8 @@ class Settings(BaseSettings):
     # `rerank_candidates` chunks from the retriever down to the context size.
     reranker: str = ""
     rerank_candidates: int = 20
+    # Results per branch before fusion (app/retrieval.py); the fused list is cut to k.
+    retrieval_depth: int = 20
 
 
 @lru_cache

@@ -137,7 +137,7 @@ def main() -> None:
     llm = get_chat_model(settings)
     retriever = build_retriever(
         settings.retriever, CONTEXT_K, reranker=settings.reranker,
-        candidates=settings.rerank_candidates,
+        candidates=settings.rerank_candidates, depth=settings.retrieval_depth,
     )  # fmt: skip
     translator = (
         build_translator(llm) if needs_translation(settings.retriever, settings.reranker) else None

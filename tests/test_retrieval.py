@@ -84,3 +84,8 @@ def test_untranslated_variants_never_read_english():
 def test_translated_variant_without_english_fails_loudly():
     with pytest.raises(KeyError):
         compose("bm25_en", ENGINES, 10).invoke({"tr": "soru"})
+
+
+def test_single_branch_is_cut_to_k_even_when_the_engine_returns_more():
+    many = {"dense": RunnableLambda(lambda text: [doc(f"d{i}") for i in range(20)])}
+    assert len(compose("dense", many, 5).invoke(QUERY)) == 5
