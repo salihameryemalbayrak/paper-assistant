@@ -19,7 +19,7 @@ Takvim yok; her aşama, "bitti" kriteri sağlanınca tamamlanmış sayılır.
 - **7a, derlemi büyütme: tamam.** 5 → 18 makale, 1734 chunk. İki ingest düzeltmesi yapıldı (yazar adları başlık sanılıyordu; uzun tablo altyazıları her parçada tekrarlanıyordu). Gerileme ölçüldü: R@5 0,781 → 0,688, doğru cevap 10 → 9. Ayrıntı: D34.
 - Aşama 6 yoklaması yapıldı.
 
-**Şu anki iş: 7b, eval setini 20 → ~49 soruya çıkarmak.** 40 soru hazır.
+**7b tamam: eval seti 49 soru** (D35).
 - [x] `phrasing` alanı (`term` / `paraphrase` / `inference`). Sonuçlar ifade biçimine göre de gruplanıyor. Kaynakla nadir terim örtüşmesi kontrolü: `eval.check_phrasing`.
 - [x] Kanıtla doğrulama (`evidence`, `absent_terms`, `eval.check_evidence`). Kullanıcı elle kontrol istemedi (D35).
 - [x] 1. parti (q21–q30): 9/10 `paraphrase` ya da `inference`.
@@ -28,11 +28,13 @@ Takvim yok; her aşama, "bitti" kriteri sağlanınca tamamlanmış sayılır.
 - [x] 2. parti (q31–q40): 3 tablo, 3 şekil, 2 tek sayfa, 1 karşılaştırma, 1 yok.
   - 34 cevaplanabilir soruyla R@5: `term` 0,733, `paraphrase` 0,542, `inference` 0,571.
   - En zayıf grup şekil soruları: R@5 0,500, R@1 0.
-- [ ] 3. parti (9 soru): 3 tek sayfa, 2 tablo, 2 karşılaştırma, 2 yok → toplam 49.
+- [x] 3. parti (q41–q49).
+  - Son durum: R@5 0,671 (41 cevaplanabilir soru). `term` 0,750, `paraphrase` 0,607, `inference` 0,636.
+  - En zayıf gruplar: şekil (0,500) ve karşılaştırma (0,438).
 
 - Her partiden sonra: `eval.translations --missing` → `eval.check_evidence` → `eval.check_phrasing` → hızlı eval.
 
-**Sonra:** 7c RAGAS (hakem LLM seçimi: ücretsiz, sabit), 7d Langfuse, 7e CI'da hızlı eval.
+**Sıradaki:** 49 soruyla cevap eval (baseline), sonra 7c RAGAS (hakem LLM seçimi: ücretsiz, sabit), 7d Langfuse, 7e CI'da hızlı eval.
 
 **Oturum başında:**
 1. Docker Desktop'ı aç → `docker compose -f infra/docker-compose.yml up -d qdrant`
@@ -52,6 +54,8 @@ Takvim yok; her aşama, "bitti" kriteri sağlanınca tamamlanmış sayılır.
 - **Büyük şekil chunk'ları bölünürken altyazı tekrarlanmıyor** (Aşama 3'ten açık).
 - **ARES Tablo 6'nın 4 chunk'ı 512 sınırını ~35 token aşıyor:** Geniş tablo; sütun başlığı satırı 332 token. Kabul edildi (D34). Çözüm, tablo ayırıcılarını sıkıştırmak; ölçülerek yapılmalı.
 - **Kardeş makaleler dikkat dağıtıyor:** q05'te mE5 chunk'ları E5'in sayfasını bağlamdan itti (D34).
+- **Çeviri modeli bazen uyduruyor:** q42'de soruyu çevirmek yerine yanlış bir cevap yazdı (D35). Guardrail adayı.
+- **Şekil ve karşılaştırma soruları zayıf:** Şekil sorularında R@1 = 0 (8 soru); karşılaştırmalarda R@5 0,438 (D35).
 - **Eval seti İngilizce terim ağırlıklı:** BM25'i kolaylaştırıyor olabilir; Aşama 7'de terimsiz doğal Türkçe sorular eklenmeli. D30.
 - **Hızlı eval Qdrant gerektiriyor:** CI'da henüz çalışmıyor (Aşama 7'de bellekteki Qdrant veya önceden hesaplanmış vektörlerle çözülecek).
 - Docling'in testlerde verdiği 3 DeprecationWarning zararsız (Docling'in kendi kodundan).

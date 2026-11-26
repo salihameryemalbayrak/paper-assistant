@@ -518,4 +518,20 @@ Her karar için:
   - q30: cümle anlam olarak bozuk.
   - q32: karşılaştırmanın yönü ters çevrilmiş (pypdfium ↔ Docling'in kendi arka ucu).
   - q37: "yer kaplama" (space footprint) yerine "poor coverage" yazılmış.
+  - **q42: çeviri yerine uydurma.** Model soruyu çevirmedi; olmayan bir cevap yazdı: "ARES evaluates a RAG system by measuring three things: Recall@100, Precision@100, and Retrieval Quality." Dense kol Türkçe soruyla çalıştığı için doğru sayfa yine 2. sırada geldi (D32'deki "Türkçe kol sigorta" gerekçesi), ama BM25'e makalede olmayan terimler gitti. Guardrail adayı (G2): Çeviri soru biçiminde mi, uzunluğu orijinale yakın mı?
+- **Son durum (7b):** 49 soru.
+  - Türlere göre: 15 tek sayfa, 10 tablo, 8 şekil, 8 karşılaştırma, 8 yok.
+  - İfade biçimine göre: 22 term, 15 paraphrase, 12 inference.
+  - Doğrulama: 20'si elle, 29'u kanıtla; kanıt kontrolü 0 hata.
+  - Hızlı eval (`dense_tr_bm25_en`, e5-small, 18 makale, 41 cevaplanabilir soru):
+
+    | | n | R@5 | MRR |
+    |---|---|---|---|
+    | Tümü | 41 | 0,671 | 0,491 |
+    | `term` | 16 | 0,750 | 0,524 |
+    | `paraphrase` | 14 | 0,607 | 0,375 |
+    | `inference` | 11 | 0,636 | 0,591 |
+    | Şekil | 8 | 0,500 | 0,192 (R@1 = 0) |
+    | Tablo | 10 | 1,000 | 0,853 |
+    | Karşılaştırma | 8 | 0,438 | 0,455 |
 - **Etiket düzeltmesi:** `eval.check_phrasing` q34 için "value, vectors" uyarısı verdi. Haklıydı: "anahtar ve değer vektörleri" makalenin kendi terimi; etiket `paraphrase`'den `term`'e çevrildi. Sıradan kelimelerden kaynaklanan uyarılar (q21 "store", q22 "limit", q37 "vectors", q38 "stage") bilerek bırakıldı. Eşik, uyarı çıkmasın diye ayarlanmadı.
