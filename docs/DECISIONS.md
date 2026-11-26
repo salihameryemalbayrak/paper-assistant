@@ -642,3 +642,52 @@ Her karar için:
   2. Chunk düzeyinde gerçek kazanç.
   3. Cevaplarda kayıp yok.
 - **Yan gözlem:** q01'in cevabında Çince bir kelime var ("检索" = retrieval). Qwen modeli zaman zaman Çince token sızdırıyor.
+
+### D39. Tam eval: RAGAS + yerel hakem (gemma3:12b); faithfulness doğruluk değildir
+- **Hakem seçimi:** `gemma3:12b` (Ollama, 4-bit, 8,2 GB), temperature 0.
+  - Gerekçeler:
+    - Bilgisayarın 16 GB belleğine sığıyor.
+    - Çok dilli: Türkçe cevapları İngilizce bağlamla karşılaştırabiliyor.
+    - Cevap modelinden (Qwen) farklı aileden: LLM hakemlerin kendi ailesinin çıktısını kayırma eğilimi (self-preference bias) var.
+    - "Thinking" modu yok (D27).
+  - Elenenler: qwen2.5:14b (aynı aile), phi4 (ağırlıkla İngilizce), mistral-nemo.
+  - Adaylar ve boyutlar Ollama model sayfalarından kontrol edildi.
+- **RAGAS paketi:** 0.4.4, ayrı bir `eval` bağımlılık grubunda (CI ve uygulama kurmuyor). Tam eval `uv run --group eval python -m eval.full <cevap dosyası>`.
+  - **Bağımlılık bedeli 1:** RAGAS `langchain-community`'ye bağımlı. Bizim kodumuz onu import etmiyor; uygulama imajına girmiyor (D29'daki kural yalnızca bizim kodumuz için).
+  - **Bağımlılık bedeli 2:** RAGAS'ın kullandığı instructor (`jiter<0.15`) yüzünden `openai` paketi 3.58'den 3.3'e indi. uv tek bir kilit dosyası tuttuğu için bu uygulamayı da etkiliyor. Testler, doğrudan LLM çağrısı ve uçtan uca soru sorunsuz. İleride `langchain-openai` daha yeni bir `openai` isterse çakışabilir.
+  - **Bakım:** 0.4.3 ile 0.4.4 arasında 10 ay var.
+- **RAGAS içeride ne yapıyor** (`ragas/metrics/collections`, kaynak kodundan):
+  - **Faithfulness:**
+    1. Hakem cevabı atomik iddialara bölüyor.
+    2. Hakem her iddia için bağlamdan çıkarılabilir mi diye karar veriyor (NLI).
+    3. Puan = desteklenen iddia / tüm iddialar. İddia yoksa (ret cevabı) `NaN`; retler bu yüzden puanlanmıyor, kendi metriğimizle ölçülüyor (8/8).
+  - **Answer relevancy:**
+    1. Hakem cevaba bakıp "bu cevap hangi soruya verilmiş?" sorusunu yazıyor ve kaçamak (noncommittal) cevapları işaretliyor.
+    2. Puan = üretilen soru ile gerçek soru arasındaki kosinüs benzerliği (e5, `query:` önekiyle); kaçamak cevapta 0.
+    3. RAGAS bunu `strictness` kez aynı prompt'la soruyor; temperature 0'da sorular aynı çıkacağı için `strictness=1`.
+- **Bulunan hata: kaynak etiketi cezası.**
+  - İlk denemede hakeme chunk'ların düz metni verildi. Hakem, cevaptaki `[bge_m3, s.7, §4.2]` etiketini ayrı bir iddia olarak çıkardı ve bağlamda bulamadığı için "desteklenmiyor" dedi. Doğru bir cevap (q03) 0,67 aldı.
+  - Kaynak gösteren her cevap haksız yere ceza alıyordu; yani projenin temel özelliği puanı düşürüyordu.
+  - **Düzeltme:** Hakeme bağlam, cevap modelinin gördüğü biçimde (`format_docs`: etiket + metin) veriliyor. q02 ve q03 1,0'a çıktı; answer relevancy değişmedi (bağlam kullanmıyor). Testle sabitlendi.
+- **Sonuç** (derinlik 20 cevapları, D38; 30 cevap; 0 puanlanamayan; soru başına 97–270 sn, toplam ~1,5 saat, MacBook Air M4):
+
+| | Faithfulness | Answer relevancy |
+|---|---|---|
+| Tümü (30) | **0,910** | **0,877** |
+| Elle "doğru" (24) | 0,944 | 0,881 |
+| Elle "yanlış" (6) | 0,770 | 0,860 |
+
+- **RAGAS ile elle doğruluk karşılaştırması:**
+  - Faithfulness < 1 olan 7 cevaptan 3'ü gerçekten yanlış (q21, q39, q44); 4'ü doğru (q22, q24, q35, q43).
+  - Yanlış cevaplardan 3'ü faithfulness 1,0 aldı (q14, q26, q33).
+  - **Hakemin doğru yakaladığı örnek (q44):** "ReAct, CoT'den daha iyi" iddiası reddedildi, gerekçe doğru: "27,4 EM < 29,4 EM". Tabloyu 4B cevap modeli yanlış okudu, 12B hakem doğru okudu.
+  - **Hakemin yanıldığı örnek (q22):** "W = 4096 token" iddiası bağlamda açıkça yazıyor; hakem aynı paragraftaki 131K ve 16K sayılarına takılıp reddetti.
+  - **Faithfulness'ın tanım gereği kaçırdıkları:**
+    - q33: Model yanlış satırı okudu (BM25 yerine SBERT), ama yazdığı sayılar bağlamda var: "sadık ama yanlış".
+    - q14, q26: Bağlamdaki doğru ama soruyu cevaplamayan bilgiler.
+  - **Answer relevancy bu sette ayırt edici değil:** Tüm cevaplar 0,79–0,92 aralığında; yanlışlar da soruyla "ilgili".
+- **Sonuçlar (mülakat notu):**
+  1. **Faithfulness doğruluğu değil, sadakati ölçer.** "Bağlamda olmayan bir şey söyledi mi?" sorusunu cevaplar; "doğru soruyu doğru cevapladı mı?" sorusunu cevaplamaz. Uydurmayı yakalamak için iyi, yanlış okumayı ya da yanlış satır seçmeyi yakalamak için değil.
+  2. **Hakem de hata yapar** (q22). Puanlar bir ölçüm aracıdır, gerçek değildir. Hakemin kendisi de örnekleme ile kontrol edilmeli.
+  3. **Doğruluk için referans gerekir:** Beklenen cevaplar elimizde. RAGAS'ın referanslı ölçütleri (ör. answer correctness / factual correctness) ya da beklenen cevapla karşılaştıran bir hakem prompt'u bir sonraki adım olabilir; aynı hakemle ölçülmeli.
+- **Süre:** 30 cevap ~1,5 saat. Bu yüzden tam eval CI'da değil, birleştirmeden önce yerelde çalışıyor (CLAUDE.md'deki iki katmanlı eval).

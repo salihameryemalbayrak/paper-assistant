@@ -36,6 +36,12 @@ class Settings(BaseSettings):
     # Results per branch before fusion (app/retrieval.py); the fused list is cut to k.
     retrieval_depth: int = 20
 
+    # Judge LLM for the full eval (eval/full.py, RAGAS). Any OpenAI-compatible server;
+    # kept fixed across runs and written into every result (CLAUDE.md). Empty base URL:
+    # the same server as the answering LLM.
+    judge_model: str = ""
+    judge_base_url: str = ""
+
 
 @lru_cache
 def get_settings() -> Settings:

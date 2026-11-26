@@ -1,0 +1,69 @@
+{
+  "mode": "full",
+  "date": "2026-11-26T19:12:46",
+  "git_commit": "b74f7ef-dirty",
+  "hardware": "Apple M4, macOS 26.6.2",
+  "answers_file": "docs/benchmarks/answers/2026-11-26_18docs_dense_tr_bm25_en_depth20_qwen3_4b_instruct.json",
+  "answering_llm": "qwen3:4b-instruct @ http://localhost:11434/v1",
+  "judge": "gemma3:12b @ http://localhost:11434/v1",
+  "judge_temperature": 0.0,
+  "ragas_metrics": "ragas.metrics.collections Faithfulness, AnswerRelevancy(strictness=1)",
+  "answer_relevancy_embeddings": "intfloat/multilingual-e5-small",
+  "scored": 3,
+  "refusals_skipped": 19,
+  "limit": 3,
+  "seconds_total": 297,
+  "seconds_per_question_median": 95.0,
+  "summary": {
+    "all": {
+      "faithfulness": {
+        "mean": 0.8222,
+        "n": 3,
+        "not_scored": 0
+      },
+      "answer_relevancy": {
+        "mean": 0.9086,
+        "n": 3,
+        "not_scored": 0
+      }
+    },
+    "single_page": {
+      "faithfulness": {
+        "mean": 0.8222,
+        "n": 3,
+        "not_scored": 0
+      },
+      "answer_relevancy": {
+        "mean": 0.9086,
+        "n": 3,
+        "not_scored": 0
+      }
+    }
+  },
+  "per_question": [
+    {
+      "id": "q01",
+      "type": "single_page",
+      "kind": "answer",
+      "faithfulness": 1.0,
+      "answer_relevancy": 0.9005,
+      "seconds": 82.4
+    },
+    {
+      "id": "q02",
+      "type": "single_page",
+      "kind": "answer",
+      "faithfulness": 0.8,
+      "answer_relevancy": 0.9194,
+      "seconds": 95.0
+    },
+    {
+      "id": "q03",
+      "type": "single_page",
+      "kind": "answer",
+      "faithfulness": 0.6667,
+      "answer_relevancy": 0.9059,
+      "seconds": 114.1
+    }
+  ]
+}

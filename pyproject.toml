@@ -24,6 +24,9 @@ dev = [
     "pytest",
     "ruff",
 ]
+eval = [
+    "ragas>=0.4.4",
+]
 ingest = [
     "docling>=2.152.0",
 ]

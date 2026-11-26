@@ -168,7 +168,7 @@ Repo iskeleti oluştukça doldurulacak:
 | Eval sorularının kanıt kontrolü | `uv run python -m eval.check_evidence` (ifade biçimi: `uv run python -m eval.check_phrasing`) |
 | Cevap eval (LLM) | `uv run python -m eval.run --answers` (retriever `.env`'deki `RETRIEVER`; tek seferlik: `RETRIEVER=dense uv run ...`) |
 | Eval sorularını çevirme | `uv run python -m eval.translations` → `eval/translations.jsonl` (elle kontrol edilir) |
-| Tam eval | _(Aşama 7)_ |
+| Tam eval (RAGAS, hakem LLM) | `uv run --group eval python -m eval.full docs/benchmarks/answers/<dosya>.json` (`--limit 3` ile deneme; hakem: `JUDGE_MODEL`) |
 | Servisleri başlatma | _(Aşama 8)_ |
 
 ## Şimdilik yapılmayacaklar

@@ -41,13 +41,20 @@ Takvim yok; her aşama, "bitti" kriteri sağlanınca tamamlanmış sayılır.
 
 **Kol derinliği 20 eklendi (D38):** LLM'e giden kanıt 0,447 → 0,587. Doğru cevap 24/41'de kaldı. Darboğaz artık LLM'in tablo okuması (q44: satırlar bağlamda, cevap yanlış).
 
-**Sıradaki:** 7c RAGAS (hakem LLM seçimi, kullanıcı kararı) (hakem LLM seçimi: ücretsiz, sabit), 7d Langfuse, 7e CI'da hızlı eval.
+**7c RAGAS tamam (D39):** Hakem gemma3:12b (yerel). Faithfulness 0,910, answer relevancy 0,877 (30 cevap, ~1,5 saat).
+- Hakemin kaynak etiketini iddia sayıp cezalandırması düzeltildi.
+- Faithfulness doğruluk değil: Yanlış 6 cevaptan 3'ü 1,0 aldı (yanlış satır okuma, soruyu cevaplamama).
+
+**Sıradaki:**
+1. (İsteğe bağlı) Referanslı doğruluk ölçütü: beklenen cevaplarla karşılaştıran hakem (D39).
+2. 7d Langfuse.
+3. 7e CI'da hızlı eval. (hakem LLM seçimi: ücretsiz, sabit), 7d Langfuse, 7e CI'da hızlı eval.
 
 **Oturum başında:**
 1. Docker Desktop'ı aç → `docker compose -f infra/docker-compose.yml up -d qdrant`
 2. Ollama çalışmıyorsa `ollama serve` (model: `qwen3:4b-instruct`)
 3. Ortamın sağlam olduğunu doğrula:
-   - `uv run pytest` (109 test geçmeli)
+   - `uv run pytest` (112 test geçmeli; RAGAS kurulu değilse 3'ü atlanır)
    - `uv run python -m eval.run --fast --retriever dense_tr_bm25_en` (18 makale, 49 soru, derinlik 20: Recall@5 0,768, MRR 0,509, evidence recall@5 0,587 çıkmalı)
 
 **Bilinen hatalar ve sınırlamalar:**
@@ -62,6 +69,8 @@ Takvim yok; her aşama, "bitti" kriteri sağlanınca tamamlanmış sayılır.
 - **ARES Tablo 6'nın 4 chunk'ı 512 sınırını ~35 token aşıyor:** Geniş tablo; sütun başlığı satırı 332 token. Kabul edildi (D34). Çözüm, tablo ayırıcılarını sıkıştırmak; ölçülerek yapılmalı.
 - **Kardeş makaleler dikkat dağıtıyor:** q05'te mE5 chunk'ları E5'in sayfasını bağlamdan itti (D34).
 - **Çeviri modeli bazen uyduruyor:** q42'de soruyu çevirmek yerine yanlış bir cevap yazdı (D35). Guardrail adayı.
+- **RAGAS hakemi de yanılıyor:** q22'de bağlamda yazan "W = 4096" iddiasını reddetti (D39).
+- **RAGAS bağımlılığı `openai`'yi 3.3'e düşürdü:** instructor `jiter<0.15` istiyor; uygulama çalışıyor ama ileride çakışabilir (D39).
 - **Qwen bazen Çince token sızdırıyor:** q01 cevabında "检索" (D38).
 - **Tablo cevapları zayıf:** Arama tabloları buluyor ama cevaplar 2/10 doğru. Bölünmüş tablolarda gereken satır bağlamda olmuyor; model satır okumada hata yapıyor (D36).
 - **Şekil ve karşılaştırma soruları zayıf:** Şekil sorularında R@1 = 0 (8 soru); karşılaştırmalarda R@5 0,438 (D35).
