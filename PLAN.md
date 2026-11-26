@@ -34,7 +34,11 @@ Takvim yok; her aşama, "bitti" kriteri sağlanınca tamamlanmış sayılır.
 
 - Her partiden sonra: `eval.translations --missing` → `eval.check_evidence` → `eval.check_phrasing` → hızlı eval.
 
-**Sıradaki:** 49 soruyla cevap eval (baseline), sonra 7c RAGAS (hakem LLM seçimi: ücretsiz, sabit), 7d Langfuse, 7e CI'da hızlı eval.
+**49 soruyla cevap eval (baseline) tamam (D36):** 8/8 doğru ret, 24/41 doğru cevap. Tablolarda arama R@5 1,0 ama yalnızca 2/10 doğru cevap. Nedenler: 3 soruda gereken satır bağlamda yok (chunk düzeyi), 3 soruda model okuyamıyor.
+
+**Sıradaki:**
+1. **Evidence recall:** Getirilen chunk'lar kanıt alıntılarını içeriyor mu? Chunk düzeyinde, LLM'siz ölçüt (D36).
+2. 7c RAGAS (hakem LLM seçimi: ücretsiz, sabit), 7d Langfuse, 7e CI'da hızlı eval.
 
 **Oturum başında:**
 1. Docker Desktop'ı aç → `docker compose -f infra/docker-compose.yml up -d qdrant`
@@ -55,6 +59,7 @@ Takvim yok; her aşama, "bitti" kriteri sağlanınca tamamlanmış sayılır.
 - **ARES Tablo 6'nın 4 chunk'ı 512 sınırını ~35 token aşıyor:** Geniş tablo; sütun başlığı satırı 332 token. Kabul edildi (D34). Çözüm, tablo ayırıcılarını sıkıştırmak; ölçülerek yapılmalı.
 - **Kardeş makaleler dikkat dağıtıyor:** q05'te mE5 chunk'ları E5'in sayfasını bağlamdan itti (D34).
 - **Çeviri modeli bazen uyduruyor:** q42'de soruyu çevirmek yerine yanlış bir cevap yazdı (D35). Guardrail adayı.
+- **Tablo cevapları zayıf:** Arama tabloları buluyor ama cevaplar 2/10 doğru. Bölünmüş tablolarda gereken satır bağlamda olmuyor; model satır okumada hata yapıyor (D36).
 - **Şekil ve karşılaştırma soruları zayıf:** Şekil sorularında R@1 = 0 (8 soru); karşılaştırmalarda R@5 0,438 (D35).
 - **Eval seti İngilizce terim ağırlıklı:** BM25'i kolaylaştırıyor olabilir; Aşama 7'de terimsiz doğal Türkçe sorular eklenmeli. D30.
 - **Hızlı eval Qdrant gerektiriyor:** CI'da henüz çalışmıyor (Aşama 7'de bellekteki Qdrant veya önceden hesaplanmış vektörlerle çözülecek).

@@ -535,3 +535,34 @@ Her karar için:
     | Tablo | 10 | 1,000 | 0,853 |
     | Karşılaştırma | 8 | 0,438 | 0,455 |
 - **Etiket düzeltmesi:** `eval.check_phrasing` q34 için "value, vectors" uyarısı verdi. Haklıydı: "anahtar ve değer vektörleri" makalenin kendi terimi; etiket `paraphrase`'den `term`'e çevrildi. Sıradan kelimelerden kaynaklanan uyarılar (q21 "store", q22 "limit", q37 "vectors", q38 "stage") bilerek bırakıldı. Eşik, uyarı çıkmasın diye ayarlanmadı.
+
+### D36. 49 soruluk cevap eval'i (baseline): tablolarda iki farklı hata
+- **Kurulum:** `dense_tr_bm25_en`, e5-small, 18 makale, reranker yok, qwen3:4b-instruct, bağlamda 5 chunk, Apple M4.
+- **Otomatik sayımlar:**
+  - Doğru reddetme: **8/8**. Tuzak sorular dahil: q30 Mistral'in eğitim verisi, q40 Self-Consistency'de GPT-4, q48 vLLM'in Apple'da çalışması, q49 GraphRAG'in RAPTOR'la karşılaştırılması.
+  - 41 cevaplanabilir sorudan: 30 cevap, 2 kısmi, 9 ret.
+  - Gecikme (ortanca): 8,5 sn.
+  - "Uydurma etiket" uyarısı 2 soruda (q26, q47); q47'de yalnızca bölüm numarası farklı (§4.2 yerine §4).
+- **Tekrarlanabilirlik:** q01–q20'nin 20 cevabı, aynı derlemdeki önceki koşuyla birebir aynı.
+- **Doğruluk** (elle, beklenen cevapla karşılaştırarak, tek koşu): **24/41** (%59).
+  - Eski 16 soru: 9 doğru.
+  - Yeni 25 soru: 15 doğru.
+    - Doğru: q22, q23, q24, q27, q28, q29, q34, q35, q36, q37, q38, q41, q42, q43, q47.
+    - Yanlış ya da reddedilen: q21, q25, q26, q31, q32, q33, q39, q44, q45, q46.
+  - Kardeş makale testleri geçti: q38'de mE5'in 1 milyar çifti doğru, E5'in CCPairs'i ile karışmadı; q42'de ARES'in üç ölçütü doğru, Ragas ile karışmadı.
+- **Türlere göre doğru cevap:**
+
+| Tür | Doğru | Arama R@5 |
+|---|---|---|
+| Tablo | **2/10** | **1,000** |
+| Şekil | 6/8 | 0,500 |
+
+  - Tablolarda arama "her şeyi buluyor" ama cevaplar en kötü. Şekillerde arama en zayıf ama cevaplar iyi: Şekli anlatan metin paragrafları çoğu zaman yetiyor (q27, q35).
+- **Tablo hatalarının iki nedeni** (6 yeni tablo sorusu, kanıt alıntılarının bağlamda olup olmadığına bakılarak):
+  - **A) Chunk düzeyinde arama (3 soru: q25, q31, q44).** Doğru sayfa bağlamda, ama gereken satırlar yok. Tablo satır gruplarına bölünüyor; q25'te Mistral'in satırı bağlamda, karşılaştırılacak Llama 2 13B satırı başka bir parçada kalmış. Sayfa düzeyindeki Recall bunu isabet sayıyor; D28'deki "doğru sayfa ≠ doğru chunk" uyarısının ölçülmüş hâli.
+  - **B) LLM'in tablo okuması (3 soru: q32, q33, q45).** Gereken satırlar bağlamda, ama model reddediyor (q32, q45) ya da yanlış satırı okuyor (q33: BM25 satırı yerine SBERT satırı).
+- **Sonuçlar:**
+  1. **Kanıt alıntıları chunk düzeyinde bir ölçüt sağlıyor.** Elle doğrulanmamış her soruda, cevabı içeren cümleler biliniyor. "Getirilen chunk'lar kanıt alıntılarının ne kadarını içeriyor?" (evidence recall) LLM'siz, hızlı eval'e eklenebilir. Bu, D28'den beri açık olan "chunk düzeyinde ölçüt" sorusunun cevabı.
+  2. **A için çözüm adayları:** Tablo parçalarına başlık satırı zaten tekrarlanıyor. Bir parça gelince aynı tablonun komşu parçalarını da bağlama eklemek ("parent document" fikri) ya da küçük tabloları hiç bölmemek denenebilir.
+  3. **B için çözüm adayları:** Daha büyük model (Aşama 9) ya da tabloyu satır satır "anahtar: değer" metnine çevirmek. Ayrıca G1'deki tablo okuma aracı.
+  4. Hepsi ölçülerek denenmeli; önce ölçüt (1).
