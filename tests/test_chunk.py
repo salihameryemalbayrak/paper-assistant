@@ -1,6 +1,6 @@
 import re
 
-from ingest.chunk import MAX_TOKENS, TARGET_TOKENS, estimate_tokens
+from ingest.chunk import MAX_TOKENS, TARGET_TOKENS, estimate_tokens, short_caption
 from ingest.chunk import chunk_paper as _chunk_paper
 from ingest.chunk import split_table as _split_table
 from ingest.elements import Element, ElementType
@@ -153,3 +153,63 @@ def test_token_counter_drives_the_sizes():
     assert _split_table(table, estimate_tokens) == [table]
     pieces = _split_table(table, lambda text: 4 * len(text.split()))  # numbers: more tokens
     assert len(pieces) > 1
+
+
+def test_author_names_on_page_one_are_not_sections():
+    from ingest.elements import Element, ElementType, demote_front_matter_headings
+
+    def el(text, type_=ElementType.TEXT, page=1):
+        return Element(paper="ares", page=page, section="?", type=type_, text=text)
+
+    H = ElementType.HEADING
+    elements = [
+        el("ARES: An Automated Evaluation Framework", H),  # title: kept
+        el("Christopher Potts", H),  # author: demoted
+        el("Abstract", H),
+        el("We introduce ARES."),
+        el("1 Introduction", H),
+        el("Matei Zaharia", H),  # author block in the middle of the introduction
+        el("RAG systems are evaluated ..."),
+        el("Related Work", H, page=2),  # unnumbered, but not on page 1: kept
+        el("Prior work ...", page=2),
+    ]
+
+    out, demoted = demote_front_matter_headings(elements)
+
+    assert demoted == 2
+    assert [(e.type.value, e.section) for e in out] == [
+        ("heading", "ARES: An Automated Evaluation Framework"),
+        ("text", "ARES: An Automated Evaluation Framework"),
+        ("heading", "Abstract"),
+        ("text", "Abstract"),
+        ("heading", "1 Introduction"),
+        ("text", "1 Introduction"),
+        ("text", "1 Introduction"),  # was "Matei Zaharia"
+        ("heading", "Related Work"),
+        ("text", "Related Work"),
+    ]
+
+
+def test_long_table_caption_is_indexed_once_and_shortened_in_pieces():
+    explanation = " ".join(["word"] * 60)
+    caption = f"Table 1: ARES Ranking vs. RAGAS: {explanation}"
+    table = "\n".join(
+        [caption, "", "| a | b |", "|---|---|", *[f"| r{i} | {i} |" for i in range(40)]]
+    )
+    count = lambda text: len(text.split())  # noqa: E731  one token per word
+
+    pieces = _split_table(table, count, max_tokens=100)
+
+    assert short_caption(caption) == "Table 1: ARES Ranking vs. RAGAS"
+    assert pieces[0] == caption  # the full caption, once
+    assert all(p.startswith("Table 1: ARES Ranking vs. RAGAS\n") for p in pieces[1:])
+    assert all(count(p) <= 100 for p in pieces)
+    rows = [line for p in pieces[1:] for line in p.splitlines() if line.startswith("| r")]
+    assert len(rows) == 40  # every row kept exactly once
+
+
+def test_short_caption_falls_back_to_first_words():
+    assert short_caption("Table 2: Overall results on six tasks.") == (
+        "Table 2: Overall results on six tasks."
+    )
+    assert short_caption(" ".join(["w"] * 50)) == " ".join(["w"] * 30)

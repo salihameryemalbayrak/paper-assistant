@@ -15,7 +15,13 @@ from docling_core.types.doc import DocItemLabel, DoclingDocument, PictureItem, T
 
 from app.text import normalize_text
 from ingest.download import RAW_DIR
-from ingest.elements import PARSED_DIR, Element, ElementType, save_elements
+from ingest.elements import (
+    PARSED_DIR,
+    Element,
+    ElementType,
+    demote_front_matter_headings,
+    save_elements,
+)
 
 HEADING_LABELS = {DocItemLabel.TITLE, DocItemLabel.SECTION_HEADER}
 # Repeated page furniture and layout-only items carry no searchable content.
@@ -120,12 +126,13 @@ def main() -> None:
             continue
         start = time.perf_counter()
         doc = converter.convert(pdf).document
-        elements = document_to_elements(doc, paper=pdf.stem)
+        elements, demoted = demote_front_matter_headings(document_to_elements(doc, paper=pdf.stem))
         save_elements(elements, out)
         counts = {t.value: sum(e.type == t for e in elements) for t in ElementType}
         print(
             f"ok     {pdf.stem}: {len(elements)} elements {counts} "
             f"in {time.perf_counter() - start:.1f}s -> {out}"
+            + (f" | page-1 headings demoted to text: {demoted}" if demoted else "")
         )
 
 

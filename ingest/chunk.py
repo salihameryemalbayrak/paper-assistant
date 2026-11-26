@@ -85,6 +85,14 @@ class Chunk(BaseModel):
     search_text: str  # "title > section" header + text, used for embedding and BM25
 
 
+def short_caption(caption: str, max_words: int = 30) -> str:
+    """ "Table 1: Title: long explanation" -> "Table 1: Title"; else the first words."""
+    parts = caption.split(": ")
+    if len(parts) >= 3 and len(parts[1].split()) <= max_words:
+        return f"{parts[0]}: {parts[1]}"
+    return " ".join(caption.split()[:max_words])
+
+
 def split_table(
     markdown: str, count_tokens: TokenCounter, max_tokens: int = MAX_TOKENS
 ) -> list[str]:
@@ -99,9 +107,16 @@ def split_table(
     caption = "\n".join(lines[:first_row]).strip()
     header = lines[first_row : first_row + 2]  # header row + |---| separator
     rows = lines[first_row + 2 :]
-    prefix = ([caption, ""] if caption else []) + header
 
     pieces: list[str] = []
+    # A caption longer than half the budget leaves no room for rows when repeated in
+    # every piece (ARES Table 1: 356 tokens, pieces of ~770). Index the full caption once
+    # as its own piece and repeat only its title.
+    if caption and count_tokens(caption) > max_tokens // 2:
+        pieces.append(caption)
+        caption = short_caption(caption)
+    prefix = ([caption, ""] if caption else []) + header
+
     group: list[str] = []
     for row in rows:
         candidate = "\n".join(prefix + group + [row])

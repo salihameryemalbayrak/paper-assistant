@@ -449,3 +449,47 @@ Her karar için:
   - **Denenmemiş fikirler:**
     - Reranker + **3 chunk'lık bağlam** (minilm R@3 0,781 > baseline 0,719): Daha kısa prompt, daha hızlı ve daha az dikkat dağıtan bir cevap üretebilir.
     - bge'yi float16 ile çalıştırmak (gecikme).
+
+### D34. Derlem 5 → 18 makale: aday seçimi, iki ingest düzeltmesi ve gerileme ölçümü
+- **Neden önce derlem:** 5 makalede doğru chunk'ı bulmak kolaydı ve skorlar iyimser çıkıyordu. Ayrıca eval soruları yazıldıktan sonra makale eklenirse "dokümanda yok" soruları cevaplanabilir hâle gelebilirdi. Bu yüzden derlem, eval seti büyütülmeden önce büyütüldü.
+- **Aday seçimi:**
+  - Projenin kullandığı ya da kullanacağı tekniklerden 33 aday belirlendi; lisanslar arXiv OAI-PMH'tan kontrol edildi.
+  - **13'ü CC BY 4.0:** ARES, ColBERTv2, Contriever, Multilingual E5, RAPTOR, GraphRAG, Chain-of-Thought, Self-Consistency, ReAct, Reflexion, Mistral 7B, vLLM, Docling.
+  - Elenenler:
+    - LoRA, DPR, HyDE, Lost in the Middle, Llama 2, MTEB ve diğerleri: arXiv varsayılan lisansı.
+    - BEIR, Sentence-BERT: CC BY-SA.
+    - SPLADE: CC BY-NC-SA.
+  - Seçim ölçütü, eşleştirilebilir konular. Ragas ↔ ARES, E5 ↔ mE5 ↔ bge-m3 ↔ Contriever ↔ ColBERTv2, CoT ↔ Self-Consistency, ReAct ↔ Reflexion, RAPTOR ↔ GraphRAG çiftleri karşılaştırma soruları için doğal; aynı zamanda arama için gerçekçi dikkat dağıtıcılar.
+  - Sürümler arXiv API'den alınıp sabitlendi (eval sayfa numaraları PDF sürümüne bağlı).
+- **Sonuç:** 18 makale, 1734 chunk (metin 1103, tablo 412, şekil 219). Docling ile ayrıştırma 13 makalede 2 dk 25 sn; e5-small ile indeksleme 25 sn (Apple M4).
+- **Düzeltme 1: yazar adları bölüm başlığı sanılıyordu.**
+  - Docling, ilk sayfadaki yazar adlarını "section header" olarak etiketledi. ARES'te "Matei Zaharia" Giriş bölümünün ortasında başlık oldu ve sonraki 8 paragraf `§Matei Zaharia` diye kaynak gösterilecekti. Aynı durum Reflexion'da (5 yazar adı) ve Docling'de ("Version 1.0") da vardı.
+  - Kural (`demote_front_matter_headings`): 1. sayfada numarasız bir başlık, yalnızca belgenin başlığıysa (ilk başlık), "Abstract" ya da "Introduction" ise bölüm başlangıcı sayılır; diğerleri düz metne çevrilir ve bölümler yeniden hesaplanır.
+  - 8 başlık metne çevrildi (3 makale). Eski 5 makalede hiçbir eleman değişmedi. Docling'e bağlı olmayan saf bir fonksiyon olduğu için CI'da test ediliyor. `ingest.parse` çevrilen başlık sayısını yazdırıyor.
+- **Düzeltme 2: uzun tablo altyazıları her parçada tekrarlanıyordu.**
+  - Token sayacı (D24) 24 chunk'ın 512 sınırını aştığını yakaladı (en uzunu 787). Hepsi ARES tablolarından. Altyazılar bir paragraf uzunluğunda (Tablo 1'de 356 token); `split_table` altyazıyı ve başlık satırını her parçaya tekrar koyduğu için tek satırlık parçalar bile ~770 token'a çıkıyordu.
+  - Kural: Altyazı bütçenin yarısını (200 token) aşıyorsa tam altyazı **bir kez** ayrı parça olarak indekslenir; satır parçalarına yalnızca başlığı konur ("Table 1: ARES Ranking ... GPT-3.5 Judge"). "vs." kısaltması yüzünden ilk noktadan değil, ikinci iki noktadan kesiliyor.
+  - Eşik bilerek yüksek seçildi; yalnızca ARES'in 4 tablosu etkileniyor. Self-RAG Tablo 2 (145 token, bilinen "neredeyse kopya parçalar" sorunu) etkilenmiyor. Böylece eski 5 makalenin 469 chunk'ı **birebir aynı** kaldı (kontrol edildi) ve gerileme ölçümü yalnızca derlem büyümesini ölçüyor.
+  - **Kalan 4 chunk kabul edildi:** ARES Tablo 6 çok geniş; sütun başlığı satırı tek başına 332 token, `|---|` ayırıcısı 90 token. Bu 4 chunk'ta (%0,2) indeksteki son ~35 token kesiliyor; LLM'e giden metin tam. Ayırıcıları bütün tablolarda sıkıştırmak bunu çözer, ama eski chunk'ları da değiştirir; ayrı bir ölçümle yapılmalı.
+- **Gerileme ölçümü** (aynı 20 soru; `dense_tr_bm25_en`; e5-small; qwen3:4b-instruct; Apple M4):
+
+| Varyant | R@1 | R@3 | R@5 | R@10 | MRR |
+|---|---|---|---|---|---|
+| dense | 0,375 → 0,375 | 0,531 → 0,469 | 0,594 → 0,469 | 0,750 → 0,750 | 0,509 → 0,481 |
+| bm25_en | 0,469 → 0,594 | 0,656 → 0,719 | 0,750 → 0,750 | 0,906 → 0,750 | 0,646 → 0,693 |
+| hybrid_en | 0,375 → 0,375 | 0,656 → 0,656 | 0,719 → 0,656 | 0,844 → 0,812 | 0,556 → 0,537 |
+| **dense_tr_bm25_en** | 0,375 → 0,375 | 0,719 → 0,594 | 0,781 → 0,688 | 0,844 → 0,781 | 0,563 → 0,521 |
+
+| Cevap eval | 5 makale | 18 makale |
+|---|---|---|
+| Doğru reddetme | 4/4 | 4/4 |
+| Cevaplanan / kısmi / reddedilen (16) | 13 / 0 / 3 | 10 / 1 / 5 |
+| Doğru (elle) | 10 | 9 |
+| Gecikme (ortanca) | 8,2 sn | 7,3 sn |
+
+- **Yorum:**
+  - **Gerileme beklenen yönde ve büyüklükte:** Varsayılan varyantta R@5 −0,09 (16 soruda ~1,5 soru). 5 makalelik sonuçlar iyimsermiş; derlemi büyütmenin amacı bunu görmekti.
+  - **Kardeş makale etkisi (q05):** mE5 de "query:/passage:" öneklerini anlatıyor. Onun chunk'ları E5'in 4. sayfasını bağlamdan itti; soru E5'i sorduğu için model doğru şekilde reddetti. Yeni eval soruları bu etkiyi bilinçli olarak ölçmeli (kardeş çiftler).
+  - **"Yok" soruları hâlâ geçerli:** q19'da bağlama mE5 chunk'ları, q18'de Mistral'in lisans chunk'ı girdi; model ikisinde de doğru şekilde reddetti.
+  - **bm25_en'nin R@1'i arttı** (0,469 → 0,594). Olası açıklama, idf'in derleme bağlı olması: kelimelerin ayırt ediciliği değişti. Bu bir tahmin, ölçülmedi.
+  - **Varyant kararı (D32) değişmedi:** 16 soruda farklar hâlâ birkaç soruluk; yeniden karar 40–60 soruluk eval setiyle verilecek.

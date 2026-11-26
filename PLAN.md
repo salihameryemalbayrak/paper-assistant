@@ -15,23 +15,34 @@ Takvim yok; her aşama, "bitti" kriteri sağlanınca tamamlanmış sayılır.
 
 ## Nerede kaldık (son oturum: 2026-11-26)
 
-**Durum:** Aşama 0–6 tamam; yalnızca Aşama 6 yoklaması kaldı.
-- Varsayılan retriever `dense_tr_bm25_en` (D32). Reranker kodu hazır ama **varsayılan kapalı** (D33).
-- İki reranker da arama ölçümlerini iyileştirdi (MRR 0,563 → 0,67 / 0,71), ama doğru cevap sayısını artırmadı:
-  - reranker yok: 10/16, 8,2 sn
-  - bge_m3: 10/16, 12,3 sn
-  - minilm_en: 7/16, 9,8 sn
+**Durum:** Aşama 0–6 tamam. Aşama 7 başladı.
+- **7a, derlemi büyütme: tamam.** 5 → 18 makale, 1734 chunk. İki ingest düzeltmesi yapıldı (yazar adları başlık sanılıyordu; uzun tablo altyazıları her parçada tekrarlanıyordu). Gerileme ölçüldü: R@5 0,781 → 0,688, doğru cevap 10 → 9. Ayrıntı: D34.
+- Aşama 6 yoklaması yapıldı.
 
-**Sıradaki iş:**
-1. Aşama 6 yoklaması.
-2. Aşama 7, tam eval: eval setini 40–60 soruya çıkarmak, RAGAS, chunk düzeyinde bir alaka ölçütü, Langfuse, CI'da hızlı eval. Eval setinin büyütülmesi ilk adım. Bu, kullanıcının soru yazıp kontrol etmesini gerektiren elle bir iş; nasıl bölüşüleceği konuşulacak.
+**Sıradaki iş: 7b, eval setini 20 → ~49 soruya çıkarmak.**
+1. `phrasing` alanı (`terim` / `anlam` / `çıkarım`) ve eval şemasına eklenmesi. Mevcut 20 soru için etiket önerisi.
+2. `anlam` sorularında, soru ile kaynak chunk arasındaki nadir terim örtüşmesini otomatik kontrol eden bir uyarı.
+3. Hedef dağılım:
+
+   | Tür | Eklenecek |
+   |---|---|
+   | Tek sayfa | 9 |
+   | Tablo | 6 |
+   | Şekil | 5 |
+   | Karşılaştırma | 5 |
+   | Dokümanda yok | 4 |
+
+   Yeni soruların en az yarısı `anlam` ya da `çıkarım` olacak. Kardeş makale çiftleri (Ragas↔ARES, E5↔mE5, CoT↔Self-Consistency, ReAct↔Reflexion, RAPTOR↔GraphRAG) bilinçli olarak kullanılacak.
+4. İş bölümü: Taslakları (soru, beklenen cevap, kaynak sayfa) Claude yazar; kullanıcı PDF'ten kontrol edip `verified: true` yapar. 10'ar soruluk partiler.
+
+**Sonra:** 7c RAGAS (hakem LLM seçimi: ücretsiz, sabit), 7d Langfuse, 7e CI'da hızlı eval.
 
 **Oturum başında:**
 1. Docker Desktop'ı aç → `docker compose -f infra/docker-compose.yml up -d qdrant`
 2. Ollama çalışmıyorsa `ollama serve` (model: `qwen3:4b-instruct`)
 3. Ortamın sağlam olduğunu doğrula:
-   - `uv run pytest` (88 test geçmeli)
-   - `uv run python -m eval.run --fast --retriever dense_tr_bm25_en` (Recall@5 0,781, MRR 0,563 çıkmalı)
+   - `uv run pytest` (96 test geçmeli)
+   - `uv run python -m eval.run --fast --retriever dense_tr_bm25_en` (18 makale: Recall@5 0,688, MRR 0,521 çıkmalı)
 
 **Bilinen hatalar ve sınırlamalar:**
 - **Büyük tablolar neredeyse kopya parçalara bölünüyor:** Self-RAG Tablo 2, uzun altyazıyı ve başlığı tekrarlayan 22 parçaya bölünmüş; ne dense ne BM25 doğru parçayı ayırt edebiliyor (q08). Olası çözüm: parçalarda altyazıyı kısaltmak. Ölçülerek denenecek.
@@ -42,11 +53,16 @@ Takvim yok; her aşama, "bitti" kriteri sağlanınca tamamlanmış sayılır.
 - **RRF tek listede bulunan chunk'ı geriye itiyor:** q11 yalnızca dense'te (6.) vardı, hibritte ilk 10'dan düştü (D31). Aynı motoru iki kola koymak ona fazladan oy verir (hybrid_en, D32).
 - **Çeviri hataları ve kelime uyuşmazlığı:** q11 "deneme" → "trial"; q07/q16 "uyum" → "alignment" (makale "agreement" diyor). Ham çeviri düzeltilmeden ölçüldü (D32).
 - **Büyük şekil chunk'ları bölünürken altyazı tekrarlanmıyor** (Aşama 3'ten açık).
+- **ARES Tablo 6'nın 4 chunk'ı 512 sınırını ~35 token aşıyor:** Geniş tablo; sütun başlığı satırı 332 token. Kabul edildi (D34). Çözüm, tablo ayırıcılarını sıkıştırmak; ölçülerek yapılmalı.
+- **Kardeş makaleler dikkat dağıtıyor:** q05'te mE5 chunk'ları E5'in sayfasını bağlamdan itti (D34).
 - **Eval seti İngilizce terim ağırlıklı:** BM25'i kolaylaştırıyor olabilir; Aşama 7'de terimsiz doğal Türkçe sorular eklenmeli. D30.
 - **Hızlı eval Qdrant gerektiriyor:** CI'da henüz çalışmıyor (Aşama 7'de bellekteki Qdrant veya önceden hesaplanmış vektörlerle çözülecek).
 - Docling'in testlerde verdiği 3 DeprecationWarning zararsız (Docling'in kendi kodundan).
 
-**Diskte bekleyen, kullanıcı kararı gereken:** `qwen3:4b` (2,5 GB, artık kullanılmıyor), bge-m3 modeli ve koleksiyonu (~2,3 GB, Aşama 7'de yeniden ölçüm için tutuluyor). Boş alan ~28 GB.
+**Diskte bekleyen, kullanıcı kararı gereken:**
+- `qwen3:4b` (2,5 GB, artık kullanılmıyor).
+- bge-m3 modeli ve koleksiyonu (~2,3 GB). Koleksiyon hâlâ eski 5 makaleyle kurulu; Aşama 7'de karşılaştırma yapılacaksa yeniden indekslenmeli.
+- Reranker modelleri: bge-reranker-v2-m3 ~2,3 GB, MiniLM ~90 MB (D33, varsayılan kapalı).
 
 ---
 
