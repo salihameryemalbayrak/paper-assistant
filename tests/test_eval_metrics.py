@@ -177,3 +177,47 @@ def test_results_are_also_grouped_by_phrasing():
 def test_phrasing_label_is_required():
     with pytest.raises(ValueError, match="phrasing"):
         EvalItem(verified=True, id="x", type="table", question="q", answer="a", sources=[A1])
+
+
+def test_evidence_found_needs_the_quote_inside_one_retrieved_chunk():
+    from eval.retrieval_metrics import evidence_found
+
+    texts = [
+        "| Mistral 7B | Pretrained | 60.1% |",
+        "unrelated",
+        "| LLaMA 2 13B | Pretrained | 55.6% |",
+    ]
+    quotes = ["| mistral 7b | pretrained | 60.1% |", "| LLaMA 2 13B |  Pretrained | 55.6% |"]
+    assert evidence_found(quotes, texts, k=2) == [True, False]  # second row is 3rd
+    assert evidence_found(quotes, texts, k=3) == [True, True]
+
+
+def test_evidence_metrics_recall_and_complete():
+    from eval.retrieval_metrics import evidence_metrics
+
+    ev = [{"paper": "a", "page": 1, "quote": "first row of the table x"},
+          {"paper": "a", "page": 1, "quote": "second row of the table y"}]  # fmt: skip
+    items = [
+        EvalItem(
+            id="t",
+            type="table",
+            phrasing="term",
+            question="t",
+            answer="x",
+            sources=[A1],
+            evidence=ev,
+        ),  # fmt: skip
+        EvalItem(
+            verified=True,
+            id="h",
+            type="table",
+            phrasing="term",
+            question="h",
+            answer="x",
+            sources=[A1],
+        ),  # fmt: skip  human-verified, no quotes: skipped
+    ]
+    result = evidence_metrics(items, lambda q: ["first row of the table x"], ks=(5,))
+    assert result["all"]["n"] == 1
+    assert result["all"]["evidence_recall@5"] == 0.5
+    assert result["all"]["evidence_complete@5"] == 0.0

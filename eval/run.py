@@ -43,7 +43,7 @@ from app.retrieval import (
 from app.translate import build_translator
 from app.vectorstore import collection_name
 from eval.dataset import QuestionType, SourceRef, load_dataset
-from eval.retrieval_metrics import Hit, evaluate, reciprocal_rank
+from eval.retrieval_metrics import Hit, evaluate, evidence_found, evidence_metrics, reciprocal_rank
 from eval.translations import TRANSLATIONS, load_translations
 
 DATASET = Path("eval/dataset.jsonl")
@@ -115,6 +115,7 @@ def run_fast(
 
     retriever.invoke({"tr": "warm-up", "en": "warm-up"})  # loads the model; not timed
     cache: dict[str, list[Hit]] = {}
+    texts: dict[str, list[str]] = {}  # retrieved chunk texts, for evidence recall
     latencies_ms: list[float] = []
 
     def retrieve(question: str) -> list[Hit]:
@@ -122,9 +123,11 @@ def run_fast(
         docs = retriever.invoke(to_query(question))
         latencies_ms.append((time.perf_counter() - start) * 1000)
         cache[question] = [to_hit(d) for d in docs]
+        texts[question] = [d.metadata["text"] for d in docs]
         return cache[question]
 
     metrics = evaluate(items, retrieve, ks=KS)
+    evidence = evidence_metrics(items, lambda question: texts[question], ks=KS)
 
     per_question = []
     for item in items:
@@ -136,6 +139,7 @@ def run_fast(
                 "id": item.id,
                 "type": item.type.value,
                 "first_relevant_rank": round(1 / rr) if rr else None,
+                "evidence_found@5": _found(item, texts[item.question], 5),
             }
         )
 
@@ -171,8 +175,17 @@ def run_fast(
         "corpus": corpus_info(),
         "latency_ms_median": round(median(latencies_ms), 1),
         "metrics": metrics,
+        "evidence": evidence,  # chunk level, questions with evidence quotes only
         "per_question": per_question,
     }
+
+
+def _found(item, texts: list[str], k: int) -> str | None:
+    """ "2/3": evidence quotes of the question found in the top-k texts; None without any."""
+    if not item.evidence:
+        return None
+    found = evidence_found([e.quote for e in item.evidence], texts, k)
+    return f"{sum(found)}/{len(found)}"
 
 
 def summarize_answers(rows: list[dict]) -> dict:
@@ -230,6 +243,10 @@ def run_answers(model: str) -> dict:
                 "kind": answer_kind(answer),  # answer | partial | refusal
                 # did the context contain an expected page? (retrieval succeeded)
                 "context_has_source": answerable and reciprocal_rank(hits, item.sources) > 0,
+                # chunk level: did the quotes the answer needs reach the LLM? (D36)
+                "evidence_in_context": _found(
+                    item, [d.metadata["text"] for d in out["docs"]], CONTEXT_K
+                ),
                 "citations": extract_citations(answer),
                 "invented_citations": check_citations(answer, out["docs"]),
                 "context": [d.metadata["chunk_id"] for d in out["docs"]],
@@ -281,6 +298,19 @@ def print_summary(result: dict) -> None:
     for group, values in result["metrics"].items():
         cells = "".join(f"{values[c]:>10}" if c == "n" else f"{values[c]:>10.3f}" for c in columns)
         print(f"{group:<12}{cells}")
+    if evidence := result.get("evidence"):
+        print("\nchunk level (questions with evidence quotes)")
+        ecols = [
+            "n",
+            *(f"evidence_recall@{k}" for k in KS),
+            *(f"evidence_complete@{k}" for k in KS),
+        ]
+        print(f"{'group':<12}" + "".join(f"{c.replace('evidence_', 'ev_'):>15}" for c in ecols))
+        for group, values in evidence.items():
+            cells = "".join(
+                f"{values[c]:>15}" if c == "n" else f"{values[c]:>15.3f}" for c in ecols
+            )
+            print(f"{group:<12}{cells}")
     missed = [q["id"] for q in result["per_question"] if q["first_relevant_rank"] is None]
     print(f"median query latency: {result['latency_ms_median']} ms | not in top {TOP_K}: {missed}")
     if counts := result.get("reranker_counts"):

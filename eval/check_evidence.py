@@ -8,6 +8,8 @@ against the parsed text the system itself sees (data/parsed/<paper>.jsonl):
   Catches a wrong page, a wrong document and misremembered or invented quotes.
 - absent_terms (unanswerable questions): none of the words may appear anywhere in the
   named document.
+- every quote should also sit inside one chunk (data/chunks.jsonl); a quote split across
+  two chunks can never be found by evidence recall (eval/retrieval_metrics.py). Warning only.
 
 Not caught: a correct quote misread into a wrong answer (e.g. a wrong subtraction), or
 an ambiguous question. See docs/DECISIONS.md, D35.
@@ -66,26 +68,41 @@ def build_texts(elements: Iterable) -> tuple[dict[tuple[str, int], str], dict[st
 def main() -> None:
     from eval.dataset import load_dataset
     from eval.run import DATASET
+    from ingest.chunk import load_chunks
     from ingest.elements import PARSED_DIR, load_elements
 
     items = load_dataset(DATASET)
     elements = [e for path in sorted(PARSED_DIR.glob("*.jsonl")) for e in load_elements(path)]
     page_text, doc_text = build_texts(elements)
+    chunk_texts: dict[str, list[str]] = {}
+    for c in load_chunks():
+        chunk_texts.setdefault(c.paper, []).append(normalize(c.text))
 
     human = [i for i in items if i.verified]
     machine = [i for i in items if not i.verified]
-    failures = 0
+    failures, split_quotes = 0, 0
     for item in machine:
         if item.type == QuestionType.UNANSWERABLE:
             problems = [f"found in document: {t}" for t in present_terms(item, doc_text)]
         else:
             problems = [f"quote not on its page: {q[:70]}" for q in missing_quotes(item, page_text)]
         failures += bool(problems)
+        split = [
+            e.quote[:60]
+            for e in item.evidence
+            if not any(normalize(e.quote) in t for t in chunk_texts.get(e.paper, []))
+        ]
+        split_quotes += len(split)
         status = "FAIL" if problems else "ok  "
-        print(f"{status} {item.id}" + "".join(f"\n       {p}" for p in problems))
+        print(
+            f"{status} {item.id}"
+            + "".join(f"\n       {p}" for p in problems)
+            + "".join(f"\n       warning, split across chunks: {q}" for q in split)
+        )
 
     print(f"\n{len(items)} questions: {len(human)} verified by a human, "
           f"{len(machine) - failures} by evidence, {failures} failed")  # fmt: skip
+    print(f"quotes split across chunks (evidence recall cannot find them): {split_quotes}")
     if failures:
         sys.exit(1)
 

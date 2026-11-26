@@ -36,8 +36,11 @@ Takvim yok; her aşama, "bitti" kriteri sağlanınca tamamlanmış sayılır.
 
 **49 soruyla cevap eval (baseline) tamam (D36):** 8/8 doğru ret, 24/41 doğru cevap. Tablolarda arama R@5 1,0 ama yalnızca 2/10 doğru cevap. Nedenler: 3 soruda gereken satır bağlamda yok (chunk düzeyi), 3 soruda model okuyamıyor.
 
+**Evidence recall eklendi (D37):** Chunk düzeyinde R@5 0,540 (sayfa düzeyinde 0,671). Karşılaştırma sorularında complete@5 = 0.
+- Bulunan tutarsızlık: Hızlı eval k=10 ile, cevap zinciri k=5 ile kuruluyor; hibritte iki "ilk 5" farklı.
+
 **Sıradaki:**
-1. **Evidence recall:** Getirilen chunk'lar kanıt alıntılarını içeriyor mu? Chunk düzeyinde, LLM'siz ölçüt (D36).
+1. **Kol derinliği:** Her kol 20 sonuç, birleştirmeden sonra k. Hızlı eval ve cevap eval ile ölçülecek (D37).
 2. 7c RAGAS (hakem LLM seçimi: ücretsiz, sabit), 7d Langfuse, 7e CI'da hızlı eval.
 
 **Oturum başında:**

@@ -566,3 +566,39 @@ Her karar için:
   2. **A için çözüm adayları:** Tablo parçalarına başlık satırı zaten tekrarlanıyor. Bir parça gelince aynı tablonun komşu parçalarını da bağlama eklemek ("parent document" fikri) ya da küçük tabloları hiç bölmemek denenebilir.
   3. **B için çözüm adayları:** Daha büyük model (Aşama 9) ya da tabloyu satır satır "anahtar: değer" metnine çevirmek. Ayrıca G1'deki tablo okuma aracı.
   4. Hepsi ölçülerek denenmeli; önce ölçüt (1).
+
+### D37. Chunk düzeyinde ölçüt (evidence recall) ve hızlı eval ile cevap zinciri arasındaki fark
+- **Ölçüt:** Kanıt alıntısı olan 25 cevaplanabilir soruda iki ölçüt:
+  - `evidence_recall@k`: Sorunun kanıt alıntılarından kaçı ilk k chunk'ın metninde geçiyor?
+  - `evidence_complete@k`: Hepsi birlikte geçiyor mu?
+  - İkincisi karşılaştırma ve iki satırlık tablo soruları için gerekli; tek parça cevap için yetmez.
+  - LLM'siz; hızlı eval'e eklendi. Cevap eval'inde her soruya `evidence_in_context` yazılıyor.
+- **Ölçütün güvenilirliği:** Bir alıntı iki chunk'a bölünmüşse hiçbir zaman bulunamaz. `eval.check_evidence` bunu sayıyor: 0 alıntı bölünmüş.
+- **Sonuç** (`dense_tr_bm25_en`, e5-small, 18 makale, k=5):
+
+| | Sayfa R@5 (41 soru) | Evidence recall@5 (25) | Evidence complete@5 |
+|---|---|---|---|
+| Tümü | 0,671 | 0,540 | 0,400 |
+| Tek sayfa | 0,667 | 0,389 | 0,333 |
+| Tablo | 1,000 | 0,917 | 0,833 |
+| Şekil | 0,500 | 0,400 | 0,400 |
+| Karşılaştırma | 0,438 | 0,500 | **0,000** |
+
+  - İki ölçüt farklı soru kümelerinde hesaplanıyor; doğrudan karşılaştırma yaklaşık.
+  - Tek sayfa sorularında doğru sayfa %67, cevabı içeren cümle %39 geliyor.
+  - Karşılaştırma sorularının hiçbirinde iki makalenin kanıtı birlikte ilk 5'e girmiyor (çeşitlilik sorunu, D33).
+- **Varyant karşılaştırması** (evidence recall@5 / complete@5):
+
+| Varyant | Recall@5 | Complete@5 | Not |
+|---|---|---|---|
+| `dense_tr_bm25_en` | 0,540 | 0,400 | |
+| `dense` | 0,407 | 0,240 | Şekillerde 0 |
+| `bm25_en` | 0,353 | 0,280 | |
+
+  - Hibritin üstünlüğü chunk düzeyinde de geçerli.
+- **Bulunan ölçüm tutarsızlığı:**
+  - Hızlı eval retriever'ı k=10 ile kuruyor (her kol 10 sonuç, RRF, sonra ilk 5'e bakılıyor). Cevap zinciri ise k=5 ile (her kol 5 sonuç).
+  - RRF puanı bir chunk'ın diğer listede de olup olmamasına bağlı; bu yüzden iki kurulumun "ilk 5"i farklı.
+  - Örnek: q31'in ve q44'ün gereken satırları hızlı eval'de ilk 5'te (1/1, 3/3), cevap eval'inde LLM'in bağlamında yoktu (D36).
+  - Yani şimdiye kadarki R@5 değerleri, LLM'e giden 5 chunk'ı tam olarak ölçmüyordu. (Tek motorlu varyantlarda fark yok; ilk 5 aynı.)
+- **Önerilen düzeltme (ölçülecek):** Kol derinliğini k'dan ayırmak (ör. her kol 20 sonuç, birleştirmeden sonra k). Hızlı eval ile cevap zinciri aynı derinliği kullanır, ölçülen ile LLM'in gördüğü aynı olur. Derin listelerde RRF'nin uzlaşma sinyali de daha güçlü.
