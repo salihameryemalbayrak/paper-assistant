@@ -516,3 +516,6 @@ Her karar için:
 - **Çeviriler:** Yeni soruların çevirileri elle kontrol edilmedi (`reviewed: false`). Ölçüm zaten ham çeviriyle yapılıyor (D32). Bilinen iki çeviri hatası:
   - q26: "ilk şekil" çevrilmemiş.
   - q30: cümle anlam olarak bozuk.
+  - q32: karşılaştırmanın yönü ters çevrilmiş (pypdfium ↔ Docling'in kendi arka ucu).
+  - q37: "yer kaplama" (space footprint) yerine "poor coverage" yazılmış.
+- **Etiket düzeltmesi:** `eval.check_phrasing` q34 için "value, vectors" uyarısı verdi. Haklıydı: "anahtar ve değer vektörleri" makalenin kendi terimi; etiket `paraphrase`'den `term`'e çevrildi. Sıradan kelimelerden kaynaklanan uyarılar (q21 "store", q22 "limit", q37 "vectors", q38 "stage") bilerek bırakıldı. Eşik, uyarı çıkmasın diye ayarlanmadı.

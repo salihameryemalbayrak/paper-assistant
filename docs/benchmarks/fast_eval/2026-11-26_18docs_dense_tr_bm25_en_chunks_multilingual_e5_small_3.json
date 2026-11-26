@@ -1,0 +1,265 @@
+{
+  "mode": "fast",
+  "date": "2026-11-26T17:37:03",
+  "git_commit": "5d1b901-dirty",
+  "hardware": "Apple M4, macOS 26.6.2",
+  "run_name": "dense_tr_bm25_en_chunks_multilingual_e5_small",
+  "retriever": "dense_tr_bm25_en",
+  "reranker": null,
+  "rerank_candidates": null,
+  "reranker_counts": null,
+  "embedding_model": "intfloat/multilingual-e5-small",
+  "retrieval": "dense_tr_bm25_en, Turkish + English query (stored, eval/translations.jsonl), top_k=10",
+  "translation_model": "qwen3:4b-instruct",
+  "latency_excludes_translation": true,
+  "dataset": {
+    "file": "eval/dataset.jsonl",
+    "answerable": 34,
+    "total": 40,
+    "verified_by_human": 20,
+    "verified_by_evidence": 20
+  },
+  "corpus": {
+    "docs": 18,
+    "chunks": 1734
+  },
+  "latency_ms_median": 25.7,
+  "metrics": {
+    "all": {
+      "n": 34,
+      "recall@1": 0.27941176470588236,
+      "recall@3": 0.5588235294117647,
+      "recall@5": 0.6323529411764706,
+      "recall@10": 0.7352941176470589,
+      "mrr": 0.4620448179271709
+    },
+    "single_page": {
+      "n": 12,
+      "recall@1": 0.25,
+      "recall@3": 0.5833333333333334,
+      "recall@5": 0.5833333333333334,
+      "recall@10": 0.75,
+      "mrr": 0.4305555555555556
+    },
+    "~term": {
+      "n": 15,
+      "recall@1": 0.4,
+      "recall@3": 0.6,
+      "recall@5": 0.7333333333333333,
+      "recall@10": 0.8333333333333334,
+      "mrr": 0.5361904761904762
+    },
+    "table": {
+      "n": 8,
+      "recall@1": 0.75,
+      "recall@3": 0.875,
+      "recall@5": 1.0,
+      "recall@10": 1.0,
+      "mrr": 0.8166666666666667
+    },
+    "figure": {
+      "n": 8,
+      "recall@1": 0.0,
+      "recall@3": 0.375,
+      "recall@5": 0.5,
+      "recall@10": 0.625,
+      "mrr": 0.19166666666666665
+    },
+    "comparison": {
+      "n": 6,
+      "recall@1": 0.08333333333333333,
+      "recall@3": 0.3333333333333333,
+      "recall@5": 0.4166666666666667,
+      "recall@10": 0.5,
+      "mrr": 0.4126984126984127
+    },
+    "~inference": {
+      "n": 7,
+      "recall@1": 0.2857142857142857,
+      "recall@3": 0.5714285714285714,
+      "recall@5": 0.5714285714285714,
+      "recall@10": 0.7142857142857143,
+      "mrr": 0.47619047619047616
+    },
+    "~paraphrase": {
+      "n": 12,
+      "recall@1": 0.125,
+      "recall@3": 0.5,
+      "recall@5": 0.5416666666666666,
+      "recall@10": 0.625,
+      "mrr": 0.3611111111111111
+    }
+  },
+  "per_question": [
+    {
+      "id": "q01",
+      "type": "single_page",
+      "first_relevant_rank": null
+    },
+    {
+      "id": "q02",
+      "type": "single_page",
+      "first_relevant_rank": 1
+    },
+    {
+      "id": "q03",
+      "type": "single_page",
+      "first_relevant_rank": 1
+    },
+    {
+      "id": "q04",
+      "type": "single_page",
+      "first_relevant_rank": 3
+    },
+    {
+      "id": "q05",
+      "type": "single_page",
+      "first_relevant_rank": null
+    },
+    {
+      "id": "q06",
+      "type": "single_page",
+      "first_relevant_rank": 2
+    },
+    {
+      "id": "q07",
+      "type": "table",
+      "first_relevant_rank": 1
+    },
+    {
+      "id": "q08",
+      "type": "table",
+      "first_relevant_rank": 1
+    },
+    {
+      "id": "q09",
+      "type": "table",
+      "first_relevant_rank": 1
+    },
+    {
+      "id": "q10",
+      "type": "table",
+      "first_relevant_rank": 1
+    },
+    {
+      "id": "q11",
+      "type": "figure",
+      "first_relevant_rank": 2
+    },
+    {
+      "id": "q12",
+      "type": "figure",
+      "first_relevant_rank": 5
+    },
+    {
+      "id": "q13",
+      "type": "figure",
+      "first_relevant_rank": 6
+    },
+    {
+      "id": "q14",
+      "type": "comparison",
+      "first_relevant_rank": 7
+    },
+    {
+      "id": "q15",
+      "type": "comparison",
+      "first_relevant_rank": null
+    },
+    {
+      "id": "q16",
+      "type": "comparison",
+      "first_relevant_rank": 2
+    },
+    {
+      "id": "q21",
+      "type": "single_page",
+      "first_relevant_rank": 6
+    },
+    {
+      "id": "q22",
+      "type": "single_page",
+      "first_relevant_rank": 1
+    },
+    {
+      "id": "q23",
+      "type": "single_page",
+      "first_relevant_rank": null
+    },
+    {
+      "id": "q24",
+      "type": "single_page",
+      "first_relevant_rank": 6
+    },
+    {
+      "id": "q25",
+      "type": "table",
+      "first_relevant_rank": 3
+    },
+    {
+      "id": "q26",
+      "type": "figure",
+      "first_relevant_rank": null
+    },
+    {
+      "id": "q27",
+      "type": "figure",
+      "first_relevant_rank": null
+    },
+    {
+      "id": "q28",
+      "type": "comparison",
+      "first_relevant_rank": 2
+    },
+    {
+      "id": "q29",
+      "type": "comparison",
+      "first_relevant_rank": 1
+    },
+    {
+      "id": "q31",
+      "type": "table",
+      "first_relevant_rank": 5
+    },
+    {
+      "id": "q32",
+      "type": "table",
+      "first_relevant_rank": 1
+    },
+    {
+      "id": "q33",
+      "type": "table",
+      "first_relevant_rank": 1
+    },
+    {
+      "id": "q34",
+      "type": "figure",
+      "first_relevant_rank": 3
+    },
+    {
+      "id": "q35",
+      "type": "figure",
+      "first_relevant_rank": null
+    },
+    {
+      "id": "q36",
+      "type": "figure",
+      "first_relevant_rank": 3
+    },
+    {
+      "id": "q37",
+      "type": "single_page",
+      "first_relevant_rank": 2
+    },
+    {
+      "id": "q38",
+      "type": "single_page",
+      "first_relevant_rank": 2
+    },
+    {
+      "id": "q39",
+      "type": "comparison",
+      "first_relevant_rank": 3
+    }
+  ]
+}

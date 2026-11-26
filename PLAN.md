@@ -19,24 +19,16 @@ Takvim yok; her aşama, "bitti" kriteri sağlanınca tamamlanmış sayılır.
 - **7a, derlemi büyütme: tamam.** 5 → 18 makale, 1734 chunk. İki ingest düzeltmesi yapıldı (yazar adları başlık sanılıyordu; uzun tablo altyazıları her parçada tekrarlanıyordu). Gerileme ölçüldü: R@5 0,781 → 0,688, doğru cevap 10 → 9. Ayrıntı: D34.
 - Aşama 6 yoklaması yapıldı.
 
-**Şu anki iş: 7b, eval setini 20 → ~49 soruya çıkarmak.** 30 soru hazır.
+**Şu anki iş: 7b, eval setini 20 → ~49 soruya çıkarmak.** 40 soru hazır.
 - [x] `phrasing` alanı (`term` / `paraphrase` / `inference`). Sonuçlar ifade biçimine göre de gruplanıyor. Kaynakla nadir terim örtüşmesi kontrolü: `eval.check_phrasing`.
 - [x] Kanıtla doğrulama (`evidence`, `absent_terms`, `eval.check_evidence`). Kullanıcı elle kontrol istemedi (D35).
 - [x] 1. parti (q21–q30): 9/10 `paraphrase` ya da `inference`.
   - İlk ölçüm (R@5): `term` 0,714, `paraphrase` 0,357, `inference` 0,375.
   - Şekil sorularında zayıf: q26 ve q27 ilk 10'da yok.
-- [ ] 2. parti (10 soru): 3 tablo, 3 şekil, 2 tek sayfa, 1 karşılaştırma, 1 yok.
-- [ ] 3. parti (~9 soru): dağılımı tamamlamak için.
-
-  Kalan hedef dağılım:
-
-  | Tür | Kalan |
-  |---|---|
-  | Tek sayfa | 5 |
-  | Tablo | 5 |
-  | Şekil | 3 |
-  | Karşılaştırma | 3 |
-  | Dokümanda yok | 3 |
+- [x] 2. parti (q31–q40): 3 tablo, 3 şekil, 2 tek sayfa, 1 karşılaştırma, 1 yok.
+  - 34 cevaplanabilir soruyla R@5: `term` 0,733, `paraphrase` 0,542, `inference` 0,571.
+  - En zayıf grup şekil soruları: R@5 0,500, R@1 0.
+- [ ] 3. parti (9 soru): 3 tek sayfa, 2 tablo, 2 karşılaştırma, 2 yok → toplam 49.
 
 - Her partiden sonra: `eval.translations --missing` → `eval.check_evidence` → `eval.check_phrasing` → hızlı eval.
 
