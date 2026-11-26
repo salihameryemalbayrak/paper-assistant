@@ -13,24 +13,18 @@ Takvim yok; her aşama, "bitti" kriteri sağlanınca tamamlanmış sayılır.
 
 ---
 
-## Nerede kaldık (son oturum: 2026-11-25, öğleden sonra ara)
+## Nerede kaldık (son oturum: 2026-11-26)
 
-**Durum:** Aşama 0–5 tamam (yoklama dahil).
-- 5c sonucu: Varsayılan retriever artık `dense_tr_bm25_en`. Dense arama Türkçe soruyla, BM25 İngilizce çeviriyle yapılıyor; sonuçlar RRF ile birleşiyor.
-- Ölçümler: Recall@5 0,594 → 0,781; tam cevap 10 → 13/16. Bedeli soru başına ~1,9 sn. Ayrıntı: D32.
+**Durum:** Aşama 0–6 tamam; yalnızca Aşama 6 yoklaması kaldı.
+- Varsayılan retriever `dense_tr_bm25_en` (D32). Reranker kodu hazır ama **varsayılan kapalı** (D33).
+- İki reranker da arama ölçümlerini iyileştirdi (MRR 0,563 → 0,67 / 0,71), ama doğru cevap sayısını artırmadı:
+  - reranker yok: 10/16, 8,2 sn
+  - bge_m3: 10/16, 12,3 sn
+  - minilm_en: 7/16, 9,8 sn
 
-**Sıradaki iş: Aşama 6 (reranker).** Kavramlar anlatıldı, henüz kod yok. Önerilen plan kullanıcı onayını bekliyor:
-1. **İki aşamalı akış:** `dense_tr_bm25_en` 20 aday getirir → cross-encoder puanlar → ilk 5 LLM'e gider.
-2. **Karşılaştırılacak iki reranker** (bilgiler Hugging Face'ten kontrol edildi):
-   - A) `BAAI/bge-reranker-v2-m3` + Türkçe soru (568M parametre, çok dilli, Apache-2.0, ~2,3 GB)
-   - B) `cross-encoder/ms-marco-MiniLM-L6-v2` + İngilizce çeviri (23M, yalnızca İngilizce, Apache-2.0, ~90 MB)
-   - Ölçülecekler: Recall@1/3/5, MRR, gecikme; en iyisi için cevap eval'i → D33.
-3. **Tasarım notları** (langchain-classic kaynak kodundan kontrol edildi):
-   - `CrossEncoderReranker` kullanılacak: (soru, `page_content`) çiftlerini `model.score` ile puanlar, sıralar, ilk `top_n`'i döndürür.
-   - `HuggingFaceCrossEncoder` yalnızca `langchain-community`'de var (kullanılmıyor). Bu yüzden `langchain_core.cross_encoders.BaseCrossEncoder` arayüzüyle kendi küçük sarmalayıcımız yazılacak (içinde sentence-transformers `CrossEncoder`).
-   - `ContextualCompressionRetriever` kullanılmayacak: retriever'a ve reranker'a aynı sorguyu veriyor, bizim sorgumuz ise `{"tr","en"}` sözlüğü. Bunun yerine LCEL kullanılacak: adayları getir, reranker'a `query["tr"]` ya da `query["en"]` ver.
-   - **Doğrulanacak:** Cross-encoder'ların azami uzunluğu ve kesme davranışı (chunk'lar 491 token'a kadar çıkıyor, soru eklenince 512'yi aşabilir). Model indirildikten sonra yapılandırmasından okunacak; gerekirse sayaç eklenecek.
-4. İlk dosya: `app/rerank.py`.
+**Sıradaki iş:**
+1. Aşama 6 yoklaması.
+2. Aşama 7, tam eval: eval setini 40–60 soruya çıkarmak, RAGAS, chunk düzeyinde bir alaka ölçütü, Langfuse, CI'da hızlı eval. Eval setinin büyütülmesi ilk adım. Bu, kullanıcının soru yazıp kontrol etmesini gerektiren elle bir iş; nasıl bölüşüleceği konuşulacak.
 
 **Oturum başında:**
 1. Docker Desktop'ı aç → `docker compose -f infra/docker-compose.yml up -d qdrant`
@@ -258,11 +252,12 @@ Türkçe soru ──► TR→EN çeviri ──► BM25(EN) + Dense(TR, EN) ─�
 **Hedef:** İlk aşamada geniş getirilen sonuçları hassas şekilde yeniden sıralamak.
 
 **Yapılacaklar:**
-- Cross-encoder reranker (bge-reranker), LangChain'in reranker/compressor sarmalayıcısıyla.
-- Akış: aday sayısı (ör. 20–50) → reranker → LLM'e giden top-k (ör. 3–8).
-- Hızlı eval ve gecikme ölçümü.
+- [x] Cross-encoder reranker: `CrossEncoderReranker` (langchain-classic) + kendi `BaseCrossEncoder` sarmalayıcımız (`app/rerank.py`). İki model karşılaştırıldı: bge-reranker-v2-m3 (TR soru), ms-marco-MiniLM-L6-v2 (EN soru).
+- [x] Akış: 20 aday → reranker → ilk 5 (cevap) / ilk 10 (hızlı eval).
+- [x] Hızlı eval, cevap eval ve gecikme ölçümü. Tablo dolgusunun yol açtığı sessiz kesme bulunup düzeltildi (94 tablo → 0). D33.
+- [ ] Denenmemiş: reranker + 3 chunk'lık bağlam; bge float16.
 
-**Çıktı / komut:** `uv run python -m eval.run --fast --variant hybrid_translate_rerank`
+**Çıktı / komut:** `uv run python -m eval.run --fast --retriever dense_tr_bm25_en --reranker <bge_m3|minilm_en>`; cevap eval: `RERANKER=minilm_en uv run python -m eval.run --answers`
 
 **Bitti kriteri:** Reranker'lı ve reranker'sız karşılaştırma tabloda (doğruluk + gecikme).
 
@@ -281,7 +276,9 @@ Türkçe soru ──► TR→EN çeviri ──► BM25(EN) + Dense(TR, EN) ─�
 **Hedef:** Cevap kalitesini ölçmek ve her isteği izlenebilir yapmak.
 
 **Yapılacaklar:**
-- Eval setini 40–60 soruya genişlet (CLAUDE.md'deki tür dağılımı).
+- Eval setini 40–60 soruya genişlet (CLAUDE.md'deki tür dağılımı). Terimsiz, doğal Türkçe sorular da eklenmeli (D30).
+- Chunk düzeyinde alaka ölçütü: Sayfa düzeyindeki Recall, reranker'ın getirdiği "ilgili ama cevabı içermeyen" chunk'ları göremiyor (D28, D33).
+- Reranker kararı yeniden ölçülür (D33).
 - RAGAS: faithfulness ve answer relevancy. Hakem LLM sabitlenir ve adı kaydedilir.
 - "Dokümanda yok" sorularında doğru reddetme oranı (kendi metriğin).
 - Kaynak formatı doğrulaması: cevaptaki her kaynak getirilen chunk'larda var mı?
@@ -392,7 +389,7 @@ Türkçe soru ──► TR→EN çeviri ──► BM25(EN) + Dense(TR, EN) ─�
 - [x] Aşama 3 — Ingest (OCR testi ertelendi: taranmış belge yok)
 - [x] Aşama 4 — Dense + basit RAG (baseline: e5-small, qwen3:4b-instruct)
 - [x] Aşama 5 — Hibrit arama + sorgu çevirisi (varsayılan: `dense_tr_bm25_en`, D32)
-- [ ] Aşama 6 — Reranker (plan hazır, onay bekliyor)
+- [x] Aşama 6 — Reranker (varsayılan kapalı: cevap kazancı ölçülmedi, D33)
 - [ ] Aşama 7 — Tam eval + Langfuse
 - [ ] Aşama 8 — API + arayüz + Docker Compose
 - [ ] Aşama 9 — Model karşılaştırma matrisi

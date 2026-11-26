@@ -19,6 +19,7 @@ The question is translated once (app.translate); each branch then takes its lang
 """
 
 from collections.abc import Mapping
+from functools import lru_cache
 from operator import itemgetter
 from typing import TypedDict
 
@@ -27,6 +28,7 @@ from langchain_core.documents import Document
 from langchain_core.runnables import Runnable, RunnableLambda
 
 from app.bm25 import load_bm25_retriever
+from app.rerank import RERANKERS, SentenceTransformerCrossEncoder, with_reranker
 from app.vectorstore import get_vectorstore
 
 RRF_C = 60  # from the original RRF paper; damps the gap between neighbouring top ranks
@@ -52,8 +54,10 @@ BRANCHES: dict[str, list[tuple[str, str]]] = {
 RETRIEVERS = tuple(BRANCHES)
 
 
-def needs_translation(name: str) -> bool:
-    return any(lang == "en" for lang, _ in BRANCHES[name])
+def needs_translation(name: str, reranker: str = "") -> bool:
+    """Does the variant (or its reranker) read the English translation?"""
+    reranker_lang = RERANKERS[reranker][1] if reranker else None
+    return reranker_lang == "en" or any(lang == "en" for lang, _ in BRANCHES[name])
 
 
 def uses_dense(name: str) -> bool:
@@ -79,9 +83,23 @@ def compose(name: str, engines: Mapping[str, Runnable], k: int) -> Runnable[Quer
     return ensemble | RunnableLambda(lambda docs: docs[:k])
 
 
-def build_retriever(name: str, k: int, model: str | None = None) -> Runnable[Query, list[Document]]:
+@lru_cache
+def get_cross_encoder(reranker: str) -> SentenceTransformerCrossEncoder:
+    """Loaded once per process; the eval reads its truncation counter."""
+    return SentenceTransformerCrossEncoder(RERANKERS[reranker][0])
+
+
+def build_retriever(
+    name: str, k: int, model: str | None = None, reranker: str = "", candidates: int = 20
+) -> Runnable[Query, list[Document]]:
+    """k documents from variant `name`; with a reranker: `candidates` reranked down to k."""
     if name not in BRANCHES:
         raise ValueError(f"unknown retriever {name!r}; choose from {RETRIEVERS}")
+    if reranker:
+        if reranker not in RERANKERS:
+            raise ValueError(f"unknown reranker {reranker!r}; choose from {tuple(RERANKERS)}")
+        base = build_retriever(name, candidates, model)
+        return with_reranker(base, get_cross_encoder(reranker), RERANKERS[reranker][1], k)
     engines: dict[str, Runnable] = {}  # each engine built once, shared by its branches
     if uses_dense(name):
         engines["dense"] = get_vectorstore(model).as_retriever(search_kwargs={"k": k})

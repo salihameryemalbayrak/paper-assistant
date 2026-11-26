@@ -12,6 +12,7 @@ Usage:
     uv run python -m eval.run --fast                       # model from EMBEDDING_MODEL
     uv run python -m eval.run --fast --model BAAI/bge-m3
     uv run python -m eval.run --fast --retriever hybrid_en   # English from translations.jsonl
+    uv run python -m eval.run --fast --retriever dense_tr_bm25_en --reranker bge_m3
     uv run python -m eval.run --answers
 """
 
@@ -30,7 +31,15 @@ from langchain_core.documents import Document
 from app.ask import CONTEXT_K, answer_kind, build_chain, check_citations, extract_citations
 from app.config import get_settings
 from app.llm import get_chat_model
-from app.retrieval import RETRIEVERS, Query, build_retriever, needs_translation, uses_dense
+from app.rerank import RERANKERS
+from app.retrieval import (
+    RETRIEVERS,
+    Query,
+    build_retriever,
+    get_cross_encoder,
+    needs_translation,
+    uses_dense,
+)
 from app.translate import build_translator
 from app.vectorstore import collection_name
 from eval.dataset import QuestionType, SourceRef, load_dataset
@@ -66,21 +75,37 @@ def _hardware() -> str:
     return f"{platform.processor() or platform.machine()}, {platform.system()}"
 
 
-def describe_query(retriever_name: str, translation: str) -> str:
-    if not needs_translation(retriever_name):
+def describe_query(retriever_name: str, translation: str, reranker: str = "") -> str:
+    if not needs_translation(retriever_name, reranker):
         return "Turkish query (no translation)"
     return f"Turkish + English query ({translation})"
 
 
-def run_fast(model: str, retriever_name: str = "dense") -> dict:
+def describe_reranker(reranker: str, candidates: int) -> str:
+    if not reranker:
+        return ""
+    model, lang = RERANKERS[reranker]
+    return f", reranked by {model} ({lang} query) from {candidates} candidates"
+
+
+def reranker_counts(reranker: str) -> dict | None:
+    if not reranker:
+        return None
+    ce = get_cross_encoder(reranker)
+    return {"pairs_scored": ce.pairs_scored, "pairs_over_max_length": ce.pairs_truncated}
+
+
+def run_fast(
+    model: str, retriever_name: str = "dense", reranker: str = "", candidates: int = 20
+) -> dict:
     items = load_dataset(DATASET)
-    retriever = build_retriever(retriever_name, TOP_K, model)
+    retriever = build_retriever(retriever_name, TOP_K, model, reranker, candidates)
 
     # Translated variants read the reviewed, stored translations: no LLM call, so the
     # timings below exclude translation (measured separately by eval.translations).
     english: dict[str, str] = {}
     translation_model = None
-    if needs_translation(retriever_name):
+    if needs_translation(retriever_name, reranker):
         stored = load_translations(TRANSLATIONS, items)
         english = {item.question: stored[item.id].en for item in items}
         translation_model = stored[items[0].id].model
@@ -119,15 +144,22 @@ def run_fast(model: str, retriever_name: str = "dense") -> dict:
         "date": datetime.now().isoformat(timespec="seconds"),
         "git_commit": _git_commit(),
         "hardware": _hardware(),
-        "run_name": f"{retriever_name}_{collection_name(model)}"
-        if uses_dense(retriever_name)
-        else retriever_name,
+        "run_name": (
+            f"{retriever_name}_{collection_name(model)}"
+            if uses_dense(retriever_name)
+            else retriever_name
+        )
+        + (f"_rerank_{reranker}" if reranker else ""),
         "retriever": retriever_name,
+        "reranker": RERANKERS[reranker][0] if reranker else None,
+        "rerank_candidates": candidates if reranker else None,
+        "reranker_counts": reranker_counts(reranker),  # incl. the warm-up query
         "embedding_model": model if uses_dense(retriever_name) else None,
         "retrieval": f"{retriever_name}, "
-        f"{describe_query(retriever_name, f'stored, {TRANSLATIONS}')}, top_k={TOP_K}",
+        f"{describe_query(retriever_name, f'stored, {TRANSLATIONS}', reranker)}"
+        f"{describe_reranker(reranker, candidates)}, top_k={TOP_K}",
         "translation_model": translation_model,
-        "latency_excludes_translation": needs_translation(retriever_name),
+        "latency_excludes_translation": needs_translation(retriever_name, reranker),
         "dataset": {"file": str(DATASET), "answerable": len(per_question), "total": len(items)},
         "latency_ms_median": round(median(latencies_ms), 1),
         "metrics": metrics,
@@ -164,9 +196,10 @@ def run_answers(model: str) -> dict:
     settings = get_settings()
     items = load_dataset(DATASET)
     llm = get_chat_model(settings)
-    retriever = build_retriever(settings.retriever, CONTEXT_K, model)
+    reranker, candidates = settings.reranker, settings.rerank_candidates
+    retriever = build_retriever(settings.retriever, CONTEXT_K, model, reranker, candidates)
     # Live translation here: the answer eval measures the whole system, translation included.
-    translator = build_translator(llm) if needs_translation(settings.retriever) else None
+    translator = build_translator(llm) if needs_translation(settings.retriever, reranker) else None
     chain = build_chain(retriever, llm, translator)
     chain.invoke("warm-up")  # loads the embedding model and the LLM
 
@@ -205,8 +238,11 @@ def run_answers(model: str) -> dict:
         "llm_temperature": settings.llm_temperature,
         "embedding_model": model,
         "retriever": settings.retriever,
+        "reranker": RERANKERS[reranker][0] if reranker else None,
+        "reranker_counts": reranker_counts(reranker),
         "retrieval": f"{settings.retriever}, "
-        f"{describe_query(settings.retriever, 'live, same LLM')}, context_k={CONTEXT_K}",
+        f"{describe_query(settings.retriever, 'live, same LLM', reranker)}"
+        f"{describe_reranker(reranker, candidates)}, context_k={CONTEXT_K}",
         "summary": summarize_answers(rows),
         "per_question": rows,
     }
@@ -230,6 +266,9 @@ def print_summary(result: dict) -> None:
         print(f"{group:<12}{cells}")
     missed = [q["id"] for q in result["per_question"] if q["first_relevant_rank"] is None]
     print(f"median query latency: {result['latency_ms_median']} ms | not in top {TOP_K}: {missed}")
+    if counts := result.get("reranker_counts"):
+        print(f"reranker pairs: {counts['pairs_scored']}, over max_length: "
+              f"{counts['pairs_over_max_length']}")  # fmt: skip
 
 
 def main() -> None:
@@ -241,6 +280,8 @@ def main() -> None:
     parser.add_argument(
         "--retriever", choices=RETRIEVERS, default="dense", help="for --fast (default: dense)"
     )
+    parser.add_argument("--reranker", choices=tuple(RERANKERS), default="", help="for --fast")
+    parser.add_argument("--candidates", type=int, default=20, help="chunks given to the reranker")
     args = parser.parse_args()
 
     model = args.model or get_settings().embedding_model
@@ -252,12 +293,14 @@ def main() -> None:
         print("\n" + json.dumps(result["summary"], indent=2, ensure_ascii=False))
         ANSWERS_DIR.mkdir(parents=True, exist_ok=True)
         slug = re.sub(r"[^a-z0-9]+", "_", get_settings().llm_model.lower()).strip("_")
-        out = unique_path(ANSWERS_DIR / f"{result['date'][:10]}_{result['retriever']}_{slug}.json")
+        rerank = f"_rerank_{get_settings().reranker}" if get_settings().reranker else ""
+        name = f"{result['date'][:10]}_{result['retriever']}{rerank}_{slug}.json"
+        out = unique_path(ANSWERS_DIR / name)
         out.write_text(json.dumps(result, indent=2, ensure_ascii=False) + "\n", encoding="utf-8")
         print(f"saved -> {out}")
         return
 
-    result = run_fast(model, args.retriever)
+    result = run_fast(model, args.retriever, args.reranker, args.candidates)
     print_summary(result)
 
     RESULTS_DIR.mkdir(parents=True, exist_ok=True)

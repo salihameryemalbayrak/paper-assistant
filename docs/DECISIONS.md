@@ -386,3 +386,66 @@ Her karar için:
     - Anlam sorularında (q05, q15) dense hâlâ daha iyi; bu yüzden dense kol tutuluyor.
   - Aşama 7'de eval seti 40–60 soruya çıkınca yeniden ölçülecek. Reranker (Aşama 6) bu varyantın aday listesi üzerine kurulacak.
 - **Süreç düzeltmesi:** Aynı gün aynı varyant iki kez çalıştırılınca sonuç dosyası üzerine yazılıyordu. Artık `unique_path` dosya varsa `_2`, `_3` ekliyor (CLAUDE.md: eski sonuç asla ezilmez).
+
+### D33. Reranker (cross-encoder): arama ölçümleri iyileşti, cevaplar iyileşmedi; varsayılan kapalı
+- **Bi-encoder ile cross-encoder farkı:**
+  - **Bi-encoder** (dense arama, e5): Soru ve chunk ayrı ayrı vektöre çevrilir. Chunk vektörleri ingest'te bir kez hesaplanır; arama hızlıdır, ama iki metin birbirini hiç "görmez", bütün anlam tek bir vektöre sıkışır.
+  - **Cross-encoder:** Soru ve chunk transformer'a birlikte girer (`[soru] [SEP] [chunk]`). Dikkat (attention) katmanları sorudaki her kelimeyi chunk'taki her kelimeyle karşılaştırır, model tek bir alaka puanı verir. Daha isabetlidir, ama önceden hesaplanacak bir şey yoktur: her (soru, chunk) çifti için model baştan çalışır.
+- **Neden iki aşama:** 469 chunk'ın hepsini cross-encoder'dan geçirmek, soru başına 469 model çalıştırması demek. Bu yüzden önce hızlı arama 20 aday getirir (önemli olan Recall: doğru chunk 20'nin içinde mi?), sonra cross-encoder yalnızca bu 20 adayı sıralar (önemli olan doğru chunk'ın ilk k'ya girmesi).
+- **LangChain'de ne kullanıldı** (langchain-classic kaynak kodundan kontrol edildi):
+  - `CrossEncoderReranker`: Her aday için `(soru, page_content)` çifti kurar, `model.score(çiftler)` ile puanlatır, büyükten küçüğe sıralar ve ilk `top_n`'i döndürür. Kullanıldı.
+  - Model sarmalayıcısı `HuggingFaceCrossEncoder` yalnızca `langchain-community`'de var (kullanılmıyor, D29). Bu yüzden `langchain_core.cross_encoders.BaseCrossEncoder` arayüzüyle kendi sarmalayıcımız yazıldı (`app/rerank.py`, içinde sentence-transformers `CrossEncoder`).
+  - `ContextualCompressionRetriever` kullanılmadı: aynı sorguyu hem retriever'a hem reranker'a veriyor. Bizim sorgumuz `{"tr","en"}` sözlüğü, reranker'a ise tek bir dilde metin gerekiyor. Yerine 3 satırlık LCEL: adayları getir, `query[dil]` ile yeniden sırala.
+  - Puanlar sigmoid'den geçmiş ya da ham logit olabilir; sıralama değişmez, çünkü sigmoid tekdüze (monoton) artan bir fonksiyon.
+- **Karşılaştırılan iki reranker** (bilgiler Hugging Face'ten):
+  - `bge_m3`: `BAAI/bge-reranker-v2-m3`, Türkçe soruyla. 568M parametre, çok dilli, Apache-2.0, ~2,3 GB.
+  - `minilm_en`: `cross-encoder/ms-marco-MiniLM-L6-v2`, İngilizce çeviriyle. 23M parametre, yalnızca İngilizce, Apache-2.0, ~90 MB.
+  - Bu karşılaştırmanın sorduğu soru: "Çeviri varken büyük, çok dilli bir reranker'a gerek var mı?"
+- **Sessiz kesme bulundu ve düzeltildi:**
+  - MiniLM'in azami uzunluğu 512 token. En uzun soruyla birlikte **142 tablo chunk'ının 94'ü** bu sınırı aşıyordu (en uzun çift 1538 token); model tabloların alt satırlarını hiç görmeden puanlayacaktı.
+  - Neden: Docling'in hizalı Markdown tabloları (`|----------|`). BERT'in WordPiece tokenizer'ı her tireyi ayrı bir token sayıyor; e5'in SentencePiece tokenizer'ı tire dizisini birleştiriyor. Chunk boyutunu e5'e göre ayarlamıştık (D24); **token sınırı modele özgüdür.**
+  - Çözüm: Yalnızca reranker girdisinde tablo dolgusu sıkıştırılıyor (`compact`: 3'ten uzun tire dizisi → `---`, çoklu boşluk → tek boşluk). İndekse dokunulmadı. Sonrasında sınırı aşan çift sayısı MiniLM'de 94'ten 0'a, bge'de 4'ten 0'a indi (bge'nin sınırı 8192 olduğu için onda zaten kesme yoktu).
+  - Sarmalayıcı sınırı aşan çiftleri sayıyor; sayı eval sonuç dosyasına yazılıyor (`reranker_counts`). Bu koşularda 340 çiftin 0'ı.
+- **Hızlı eval** (16 cevaplanabilir soru, retriever `dense_tr_bm25_en`, 20 aday → ilk 10, Apple M4; bge MPS üzerinde float32):
+
+| Reranker | R@1 | R@3 | R@5 | R@10 | MRR | Gecikme (çeviri hariç) |
+|---|---|---|---|---|---|---|
+| yok | 0,375 | 0,719 | 0,781 | 0,844 | 0,563 | 22 ms |
+| bge_m3 (TR) | **0,562** | 0,656 | **0,812** | 0,906 | 0,670 | 2695 ms |
+| minilm_en (EN) | 0,531 | **0,781** | 0,781 | 0,906 | **0,706** | 140 ms |
+
+  - Her iki reranker da q01'i kurtardı: q01 reranker'sız ilk 10'da yoktu ama 20 adayın içindeydi.
+  - Güçlü yanları farklı: bge şekil sorularının üçünü de 1. sıraya koydu; minilm tek sayfalık sorularda R@3 = 1,00 yaptı.
+  - Reranker her zaman iyileştirmiyor: bge q05'i 2. sıradan 9.'ya, minilm q12'yi 3.'den 6.'ya düşürdü.
+- **Cevap eval** (qwen3:4b-instruct, bağlamda 5 chunk, çeviri canlı; aynı gün, Apple M4):
+
+| | reranker yok | bge_m3 | minilm_en |
+|---|---|---|---|
+| Doğru reddetme | 4/4 | 4/4 | 4/4 |
+| Cevaplanan / kısmi / reddedilen (16) | 13 / 0 / 3 | 10 / 2 / 4 | 12 / 0 / 4 |
+| **Doğru** (elle, beklenen cevapla) | **10** | **10** | **7** |
+| Gecikme (ortanca) | 8,2 sn | 12,3 sn | 9,8 sn |
+
+  - **Tekrarlanabilirlik kontrolü:** Reranker'sız koşu bugün yeniden çalıştırıldı; 20 cevabın 20'si dünküyle birebir aynı (temperature 0). Gecikme 7,8 sn'den 8,2 sn'ye çıktı; karşılaştırma aynı günün sayısıyla yapıldı.
+  - Doğruluk elle sayıldı, tek koşu. Sayılara q02 (yüzeysel) ve minilm'in q16'sı (belirsiz) dahil değil. Kısmi cevaplar içerik doğruysa doğru sayıldı (bge q16).
+  - **Kazanılanlar:** bge q12'yi düzeltti (baseline'da üç "Multi"den biri yanlıştı) ve q02'ye daha ayrıntılı cevap verdi.
+  - **Kaybedilenler:**
+    - q05 (bge): Doğru chunk ilk 5'ten düştü; model reddetti. Bağlamda kaynak olmadığı için davranış doğru, hata reranker'ın.
+    - q12 (minilm): Aynı durum; Şekil 1 chunk'ı ilk 5'ten düştü.
+    - q11 (ikisinde de): Kaynak bağlamda, ama reranker'ın öne çıkardığı "retrieval nasıl çalışır" chunk'ları modeli yanılttı. Model "retrieval yapmıyor" yerine arama sürecini anlattı.
+    - q10 (minilm): Yanlış sayı (%87,0 yerine %64,4); bağlama giren başka bir tablo satırından.
+  - **Gecikme:** minilm +1,6 sn, bge +4,1 sn. Bunun 0,14 ve 2,7 sn'si reranking'in kendisi. Kalan ~1,4 sn'nin nedeni ölçülmedi; bağlamlar ~%10 uzadı (ortanca 4168 → ~4570 karakter), reranker ile Ollama aynı GPU belleğini paylaşıyor olabilir.
+- **Neden arama iyileşti ama cevaplar iyileşmedi (mülakat notu):**
+  1. LLM'e 5 chunk gidiyor; R@5 neredeyse hiç değişmedi (minilm 0,781 → 0,781). Reranker ilk 5'in **içindeki sırayı** değiştirdi; LLM için sıra pek önemli değil.
+  2. Ölçüt sayfa düzeyinde (D28): Aynı sayfanın yanlış chunk'ı da isabet sayılıyor. Reranker'ın "konuyla ilgili ama cevabı içermeyen" chunk'ları öne çıkarması Recall'da görünmüyor, cevapta görünüyor (q11).
+  3. 4B model dikkat dağıtıcı chunk'lara karşı hassas: Bağlamdaki her chunk "alakalı görünür" hâle gelince yanlış olanı seçebiliyor.
+  4. Karşılaştırma soruları (q14–q16, R@5 0,17–0,33) bir sıralama sorunu değil, çeşitlilik sorunu: Cross-encoder her chunk'ı tek tek puanlar, ilk 5 tek makaleden gelebilir. → G1 (LangGraph) belge karşılaştırma aracı.
+- **Karar:** Varsayılan **`RERANKER=` (kapalı)**. Ölçülmüş bir cevap kazancı yok; minilm doğruluğu düşürdü, bge 4 sn ekliyor. Kod ve iki reranker seçeneği kalıyor (`RERANKER=bge_m3|minilm_en`).
+  - İki reranker arasında bge daha güvenli: doğrulukta baseline ile berabere, minilm'den 3 doğru fazla. Ama 19 kat yavaş.
+  - **Sınırlar:** 16 soru, elle doğruluk, tek koşu; farkların çoğu 1–3 soru.
+  - **Yeniden ölçülecek:**
+    - Aşama 7: 40–60 soru, RAGAS faithfulness ve chunk düzeyinde bir alaka ölçütü.
+    - Aşama 9: daha büyük LLM. Daha güçlü bir model, daha iyi sıralanmış bağlamdan daha çok yararlanabilir.
+  - **Denenmemiş fikirler:**
+    - Reranker + **3 chunk'lık bağlam** (minilm R@3 0,781 > baseline 0,719): Daha kısa prompt, daha hızlı ve daha az dikkat dağıtan bir cevap üretebilir.
+    - bge'yi float16 ile çalıştırmak (gecikme).

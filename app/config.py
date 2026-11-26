@@ -29,6 +29,10 @@ class Settings(BaseSettings):
     # Retriever used by the answer chain; variants in app/retrieval.py, chosen by
     # measurement (docs/DECISIONS.md, D32). Translated variants call the LLM once per question.
     retriever: str = "dense_tr_bm25_en"
+    # Cross-encoder reranker (app/rerank.py, RERANKERS); empty = none. It reranks
+    # `rerank_candidates` chunks from the retriever down to the context size.
+    reranker: str = ""
+    rerank_candidates: int = 20
 
 
 @lru_cache

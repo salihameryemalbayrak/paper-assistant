@@ -135,8 +135,13 @@ def main() -> None:
 
     settings = get_settings()
     llm = get_chat_model(settings)
-    retriever = build_retriever(settings.retriever, CONTEXT_K)
-    translator = build_translator(llm) if needs_translation(settings.retriever) else None
+    retriever = build_retriever(
+        settings.retriever, CONTEXT_K, reranker=settings.reranker,
+        candidates=settings.rerank_candidates,
+    )  # fmt: skip
+    translator = (
+        build_translator(llm) if needs_translation(settings.retriever, settings.reranker) else None
+    )
     chain = build_chain(retriever, llm, translator)
 
     start = time.perf_counter()
@@ -151,7 +156,8 @@ def main() -> None:
         print(f"  {citation_label(doc.metadata)} {doc.metadata['chunk_id']}")
     if unknown := check_citations(result["answer"], result["docs"]):
         print(f"\nUYARI: bağlamda olmayan kaynak etiketi: {unknown}")
-    models = f"{settings.llm_model} | {settings.retriever} | {settings.embedding_model}"
+    rerank = f" + rerank {settings.reranker}" if settings.reranker else ""
+    models = f"{settings.llm_model} | {settings.retriever}{rerank} | {settings.embedding_model}"
     print(f"\n[{models} | {elapsed:.1f} sn]")
 
 
