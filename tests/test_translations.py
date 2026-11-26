@@ -7,6 +7,8 @@ from eval.dataset import EvalItem, SourceRef, load_dataset
 from eval.translations import load_translations
 
 ITEM = EvalItem(
+    verified=True,  # human-verified: no evidence needed
+    phrasing="term",
     id="q1",
     type="single_page",
     question="Seyrek arama neden zayıf?",

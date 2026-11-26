@@ -96,7 +96,12 @@ Kod yalnızca OpenAI uyumlu bir API'ye konuşur. Model sunucusu ortam değişken
 - Ham PDF'ler ve indeks verisi git'e girmez (`.gitignore`). Veriyi indiren/işleyen betikler paylaşılır, verinin kendisi paylaşılmaz.
 
 ## Değerlendirme (eval-first)
-- **Eval seti:** Küçük, elle doğrulanmış; hedef 40–60 soru (20 soruyla başlanır). Her soruda soru, beklenen cevap ve kaynak sayfa bulunur.
+- **Eval seti:** Küçük; hedef 40–60 soru. Her soruda soru, beklenen cevap, kaynak sayfa ve ifade biçimi (`term` / `paraphrase` / `inference`) bulunur. Sonuçlar ifade biçimine göre de ayrı raporlanır.
+  - **Doğrulama:** İlk 20 soru elle doğrulandı (`verified: true`). Sonrakilerin taslağını Claude yazar ve elle değil **kanıtla** doğrulanır:
+    - Her kaynak sayfa için o sayfanın ayrıştırılmış metninden birebir alıntı (`evidence`).
+    - "Dokümanda yok" sorularında belgede geçmemesi gereken kelimeler (`absent_terms`).
+    - Kontrol `uv run python -m eval.check_evidence` ile yapılır; yeni soru eklenince çalıştırılır ve hata vermeden commit edilmez.
+    - Sonuç dosyaları kaç sorunun elle, kaçının kanıtla doğrulandığını yazar (D35).
 - **Soru türleri ve hedef dağılım:** tek sayfa (~15), tablo (~10), şekil (~8), iki makale karşılaştırma (~8), "dokümanda yok" (~8).
 - **Eval iki katmanlıdır:**
   - *Hızlı eval:* Yalnızca retrieval ölçülür, LLM çağrılmaz (Recall@k, MRR). Her değişiklikte ve CI'da çalışır.
@@ -160,7 +165,8 @@ Repo iskeleti oluştukça doldurulacak:
 | İndeksleme (Qdrant) | `uv run python -m ingest.index` (`--model BAAI/bge-m3` ile başka model) |
 | Soru sorma (CLI) | `uv run python -m app.ask "soru"` |
 | Hızlı eval (retrieval) | `uv run python -m eval.run --fast` (`--retriever dense_tr_bm25_en`, `--reranker minilm_en`, `--model ...`; varyantlar `app/retrieval.py`, reranker'lar `app/rerank.py`) |
-| Cevap eval (20 soru, LLM) | `uv run python -m eval.run --answers` (retriever `.env`'deki `RETRIEVER`; tek seferlik: `RETRIEVER=dense uv run ...`) |
+| Eval sorularının kanıt kontrolü | `uv run python -m eval.check_evidence` (ifade biçimi: `uv run python -m eval.check_phrasing`) |
+| Cevap eval (LLM) | `uv run python -m eval.run --answers` (retriever `.env`'deki `RETRIEVER`; tek seferlik: `RETRIEVER=dense uv run ...`) |
 | Eval sorularını çevirme | `uv run python -m eval.translations` → `eval/translations.jsonl` (elle kontrol edilir) |
 | Tam eval | _(Aşama 7)_ |
 | Servisleri başlatma | _(Aşama 8)_ |

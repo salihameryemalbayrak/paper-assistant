@@ -39,9 +39,32 @@ def test_chunk_spanning_two_pages_matches_either_page():
 
 def test_evaluate_with_fake_retriever():
     items = [
-        EvalItem(id="q1", type="table", question="q1", answer="x", sources=[A1]),
-        EvalItem(id="q2", type="single_page", question="q2", answer="x", sources=[B5]),
-        EvalItem(id="q3", type="unanswerable", question="q3", answer="Dokümanda bulamadım."),
+        EvalItem(
+            verified=True,
+            phrasing="term",
+            id="q1",
+            type="table",
+            question="q1",
+            answer="x",
+            sources=[A1],
+        ),
+        EvalItem(
+            verified=True,
+            phrasing="term",
+            id="q2",
+            type="single_page",
+            question="q2",
+            answer="x",
+            sources=[B5],
+        ),
+        EvalItem(
+            verified=True,
+            phrasing="term",
+            id="q3",
+            type="unanswerable",
+            question="q3",
+            answer="Dokümanda bulamadım.",
+        ),
     ]
     fake_results = {"q1": [{A1}, {C9}], "q2": [{C9}, {B5}], "q3": [{C9}]}
 
@@ -56,11 +79,27 @@ def test_evaluate_with_fake_retriever():
 
 def test_schema_rules():
     with pytest.raises(ValueError):  # answerable question without a source
-        EvalItem(id="x", type="table", question="q", answer="a")
+        EvalItem(verified=True, phrasing="term", id="x", type="table", question="q", answer="a")
     with pytest.raises(ValueError):  # unanswerable question with a source
-        EvalItem(id="x", type="unanswerable", question="q", answer="a", sources=[A1])
+        EvalItem(
+            verified=True,
+            phrasing="term",
+            id="x",
+            type="unanswerable",
+            question="q",
+            answer="a",
+            sources=[A1],
+        )
     with pytest.raises(ValueError):  # comparison needs two different papers
-        EvalItem(id="x", type="comparison", question="q", answer="a", sources=[A1, A2])
+        EvalItem(
+            verified=True,
+            phrasing="term",
+            id="x",
+            type="comparison",
+            question="q",
+            answer="a",
+            sources=[A1, A2],
+        )
 
 
 def test_load_dataset_reports_line_number(tmp_path):
@@ -68,18 +107,27 @@ def test_load_dataset_reports_line_number(tmp_path):
     good = {
         "id": "q1",
         "type": "table",
+        "phrasing": "term",
+        "verified": True,
         "question": "q",
         "answer": "a",
         "sources": [{"paper": "a", "page": 1}],
     }
-    bad = {"id": "q2", "type": "table", "question": "q", "answer": "a"}
+    bad = {
+        "id": "q2",
+        "type": "table",
+        "phrasing": "term",
+        "verified": True,
+        "question": "q",
+        "answer": "a",
+    }
     path.write_text(json.dumps(good) + "\n" + json.dumps(bad) + "\n", encoding="utf-8")
 
     with pytest.raises(ValueError, match=":2:"):
         load_dataset(path)
 
 
-def test_real_dataset_is_valid_and_verified():
+def test_real_dataset_is_valid_and_verified_by_a_human_or_by_evidence():
     from pathlib import Path
 
     from ingest.download import parse_sources
@@ -90,8 +138,42 @@ def test_real_dataset_is_valid_and_verified():
     }
 
     assert len(items) >= 20
-    unverified = [i.id for i in items if not i.verified]
-    assert not unverified, f"questions not checked against the PDF yet: {unverified}"
+    # Loading already enforces that an unverified question carries evidence (D35); that
+    # the quotes are really on their pages needs the PDFs: uv run python -m eval.check_evidence
     for item in items:
-        for source in item.sources:
+        for source in [*item.sources, *item.evidence]:
             assert source.paper in known_papers, f"{item.id}: unknown paper {source.paper!r}"
+        for paper in item.absent_terms:
+            assert paper in known_papers, f"{item.id}: unknown paper {paper!r}"
+
+
+def test_results_are_also_grouped_by_phrasing():
+    items = [
+        EvalItem(
+            verified=True,
+            id="t",
+            type="table",
+            phrasing="term",
+            question="t",
+            answer="x",
+            sources=[A1],
+        ),
+        EvalItem(
+            verified=True,
+            id="p",
+            type="table",
+            phrasing="paraphrase",
+            question="p",
+            answer="x",
+            sources=[A1],
+        ),
+    ]
+    result = evaluate(items, lambda q: {"t": [{A1}], "p": [{C9}]}[q], ks=(1,))
+    assert result["~term"]["recall@1"] == 1.0
+    assert result["~paraphrase"]["recall@1"] == 0.0
+    assert result["table"]["n"] == 2
+
+
+def test_phrasing_label_is_required():
+    with pytest.raises(ValueError, match="phrasing"):
+        EvalItem(verified=True, id="x", type="table", question="q", answer="a", sources=[A1])

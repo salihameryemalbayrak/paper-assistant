@@ -160,7 +160,15 @@ def run_fast(
         f"{describe_reranker(reranker, candidates)}, top_k={TOP_K}",
         "translation_model": translation_model,
         "latency_excludes_translation": needs_translation(retriever_name, reranker),
-        "dataset": {"file": str(DATASET), "answerable": len(per_question), "total": len(items)},
+        "dataset": {
+            "file": str(DATASET),
+            "answerable": len(per_question),
+            "total": len(items),
+            # how the expected answers were checked (D35)
+            "verified_by_human": sum(i.verified for i in items),
+            "verified_by_evidence": sum(not i.verified for i in items),
+        },
+        "corpus": corpus_info(),
         "latency_ms_median": round(median(latencies_ms), 1),
         "metrics": metrics,
         "per_question": per_question,
@@ -236,6 +244,7 @@ def run_answers(model: str) -> dict:
         "hardware": _hardware(),
         "llm": f"{settings.llm_model} @ {settings.llm_base_url}",
         "llm_temperature": settings.llm_temperature,
+        "corpus": corpus_info(),
         "embedding_model": model,
         "retriever": settings.retriever,
         "reranker": RERANKERS[reranker][0] if reranker else None,
@@ -246,6 +255,14 @@ def run_answers(model: str) -> dict:
         "summary": summarize_answers(rows),
         "per_question": rows,
     }
+
+
+def corpus_info() -> dict:
+    """Documents and chunks in data/chunks.jsonl: results depend on the corpus size."""
+    from ingest.chunk import load_chunks
+
+    chunks = load_chunks()
+    return {"docs": len({c.paper for c in chunks}), "chunks": len(chunks)}
 
 
 def unique_path(path: Path) -> Path:
@@ -294,7 +311,8 @@ def main() -> None:
         ANSWERS_DIR.mkdir(parents=True, exist_ok=True)
         slug = re.sub(r"[^a-z0-9]+", "_", get_settings().llm_model.lower()).strip("_")
         rerank = f"_rerank_{get_settings().reranker}" if get_settings().reranker else ""
-        name = f"{result['date'][:10]}_{result['retriever']}{rerank}_{slug}.json"
+        docs = f"{result['corpus']['docs']}docs"
+        name = f"{result['date'][:10]}_{docs}_{result['retriever']}{rerank}_{slug}.json"
         out = unique_path(ANSWERS_DIR / name)
         out.write_text(json.dumps(result, indent=2, ensure_ascii=False) + "\n", encoding="utf-8")
         print(f"saved -> {out}")
@@ -304,7 +322,8 @@ def main() -> None:
     print_summary(result)
 
     RESULTS_DIR.mkdir(parents=True, exist_ok=True)
-    out = unique_path(RESULTS_DIR / f"{result['date'][:10]}_{result['run_name']}.json")
+    docs = f"{result['corpus']['docs']}docs"
+    out = unique_path(RESULTS_DIR / f"{result['date'][:10]}_{docs}_{result['run_name']}.json")
     out.write_text(json.dumps(result, indent=2, ensure_ascii=False) + "\n", encoding="utf-8")
     print(f"saved -> {out}")
 

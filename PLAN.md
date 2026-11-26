@@ -19,21 +19,26 @@ Takvim yok; her aşama, "bitti" kriteri sağlanınca tamamlanmış sayılır.
 - **7a, derlemi büyütme: tamam.** 5 → 18 makale, 1734 chunk. İki ingest düzeltmesi yapıldı (yazar adları başlık sanılıyordu; uzun tablo altyazıları her parçada tekrarlanıyordu). Gerileme ölçüldü: R@5 0,781 → 0,688, doğru cevap 10 → 9. Ayrıntı: D34.
 - Aşama 6 yoklaması yapıldı.
 
-**Sıradaki iş: 7b, eval setini 20 → ~49 soruya çıkarmak.**
-1. `phrasing` alanı (`terim` / `anlam` / `çıkarım`) ve eval şemasına eklenmesi. Mevcut 20 soru için etiket önerisi.
-2. `anlam` sorularında, soru ile kaynak chunk arasındaki nadir terim örtüşmesini otomatik kontrol eden bir uyarı.
-3. Hedef dağılım:
+**Şu anki iş: 7b, eval setini 20 → ~49 soruya çıkarmak.** 30 soru hazır.
+- [x] `phrasing` alanı (`term` / `paraphrase` / `inference`). Sonuçlar ifade biçimine göre de gruplanıyor. Kaynakla nadir terim örtüşmesi kontrolü: `eval.check_phrasing`.
+- [x] Kanıtla doğrulama (`evidence`, `absent_terms`, `eval.check_evidence`). Kullanıcı elle kontrol istemedi (D35).
+- [x] 1. parti (q21–q30): 9/10 `paraphrase` ya da `inference`.
+  - İlk ölçüm (R@5): `term` 0,714, `paraphrase` 0,357, `inference` 0,375.
+  - Şekil sorularında zayıf: q26 ve q27 ilk 10'da yok.
+- [ ] 2. parti (10 soru): 3 tablo, 3 şekil, 2 tek sayfa, 1 karşılaştırma, 1 yok.
+- [ ] 3. parti (~9 soru): dağılımı tamamlamak için.
 
-   | Tür | Eklenecek |
-   |---|---|
-   | Tek sayfa | 9 |
-   | Tablo | 6 |
-   | Şekil | 5 |
-   | Karşılaştırma | 5 |
-   | Dokümanda yok | 4 |
+  Kalan hedef dağılım:
 
-   Yeni soruların en az yarısı `anlam` ya da `çıkarım` olacak. Kardeş makale çiftleri (Ragas↔ARES, E5↔mE5, CoT↔Self-Consistency, ReAct↔Reflexion, RAPTOR↔GraphRAG) bilinçli olarak kullanılacak.
-4. İş bölümü: Taslakları (soru, beklenen cevap, kaynak sayfa) Claude yazar; kullanıcı PDF'ten kontrol edip `verified: true` yapar. 10'ar soruluk partiler.
+  | Tür | Kalan |
+  |---|---|
+  | Tek sayfa | 5 |
+  | Tablo | 5 |
+  | Şekil | 3 |
+  | Karşılaştırma | 3 |
+  | Dokümanda yok | 3 |
+
+- Her partiden sonra: `eval.translations --missing` → `eval.check_evidence` → `eval.check_phrasing` → hızlı eval.
 
 **Sonra:** 7c RAGAS (hakem LLM seçimi: ücretsiz, sabit), 7d Langfuse, 7e CI'da hızlı eval.
 

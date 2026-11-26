@@ -40,8 +40,8 @@ def evaluate(
 ) -> dict[str, dict[str, float]]:
     """Run the retriever on every answerable question.
 
-    Returns metrics overall and per question type, e.g.
-    {"all": {"n": 15, "recall@5": 0.8, "mrr": 0.62, ...}, "table": {...}}.
+    Returns metrics overall, per question type and per phrasing ("~" prefix), e.g.
+    {"all": {"n": 15, "recall@5": 0.8, "mrr": 0.62, ...}, "table": {...}, "~term": {...}}.
     """
     per_type: dict[str, list[dict[str, float]]] = {}
     for item in items:
@@ -52,6 +52,7 @@ def evaluate(
         scores["mrr"] = reciprocal_rank(hits, item.sources)
         per_type.setdefault("all", []).append(scores)
         per_type.setdefault(item.type.value, []).append(scores)
+        per_type.setdefault(f"~{item.phrasing.value}", []).append(scores)
 
     return {
         group: {"n": len(rows), **{name: mean(r[name] for r in rows) for name in rows[0]}}

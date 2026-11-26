@@ -493,3 +493,26 @@ Her karar için:
   - **"Yok" soruları hâlâ geçerli:** q19'da bağlama mE5 chunk'ları, q18'de Mistral'in lisans chunk'ı girdi; model ikisinde de doğru şekilde reddetti.
   - **bm25_en'nin R@1'i arttı** (0,469 → 0,594). Olası açıklama, idf'in derleme bağlı olması: kelimelerin ayırt ediciliği değişti. Bu bir tahmin, ölçülmedi.
   - **Varyant kararı (D32) değişmedi:** 16 soruda farklar hâlâ birkaç soruluk; yeniden karar 40–60 soruluk eval setiyle verilecek.
+
+### D35. Eval sorularının doğrulanması: elle değil, kanıtla
+- **Durum:** İlk 20 soru elle, PDF'e bakılarak doğrulandı. Set 40–60 soruya büyürken kalan soruları elle kontrol etmek istemedim. Ama taslakları Claude yazıyor; hiç kontrol edilmezse eval, onun hatalarını "doğru cevap" diye kabul eder. Sistem doğru cevap verse bile yanlış sayılabilir.
+- **Değerlendirilen seçenekler:**
+  1. **Otomatik kanıt kontrolü.** Seçildi.
+  2. Kanıt kontrolü + her partide rastgele 1 sorunun elle kontrolü (örnekleme).
+  3. İkinci bir LLM'e kontrol ettirmek. Elendi: yerelde çalışabilecek modeller taslağı yazandan daha güvenilir bir hakem değil; ayrıca RAGAS hakemiyle iç içe geçer.
+- **Nasıl çalışıyor:**
+  - Elle doğrulanmamış (`verified: false`) her cevaplanabilir soru, **her kaynak sayfası için** o sayfanın ayrıştırılmış metninden birebir kopyalanmış bir alıntı taşır (`evidence`: paper, page, quote; en az 20 karakter).
+  - "Dokümanda yok" soruları, adı geçen belgede **hiç geçmemesi gereken** kelimeleri taşır (`absent_terms`).
+  - Şema bunu yükleme sırasında zorunlu kılıyor: Kanıtı olmayan doğrulanmamış bir soru yüklenemez, sessizce eval'e giremez.
+  - `eval/check_evidence.py` alıntıları sayfalarda, yok kelimelerini belgelerde arar. Büyük/küçük harf ve boşluk farkı yok sayılır; "İ" önce "i"ye çevrilir (Python'un `lower()` sorunu, D29).
+- **Neden Docling'in metniyle karşılaştırılıyor:** Alıntılar PDF'in kendisiyle değil, sistemin gördüğü ayrıştırılmış metinle karşılaştırılıyor. Docling'in yanlış okuduğu bir kelime alıntıda da aynı yanlışla geçer; eval sistemin gerçekte erişebildiği bilgiyi ölçmeli.
+- **Kontrolün kendisi test edildi:** Gerçek veride q21'in sayfası bilerek 2'den 3'e çevrildiğinde eksik alıntı raporlandı; q30'a makalede geçen bir kelime ("sliding window") eklendiğinde de yakalandı. Hiç başarısız olmayan bir kontrol, çalıştığını kanıtlamaz.
+- **Yakaladıkları:** Yanlış sayfa, yanlış belge, uydurulmuş ya da yanlış hatırlanmış alıntı, aslında cevaplanabilir olan "yok" sorusu.
+- **Yakalayamadıkları:**
+  - Doğru bir alıntıdan yanlış bir cevap çıkarılması (ör. q24 ve q25'teki çıkarma işlemleri).
+  - Belirsiz yazılmış sorular.
+  - Bu, elle doğrulamaya göre daha zayıf bir güvence; sonuç dosyalarına yazılıyor (`verified_by_human`, `verified_by_evidence`).
+- **Sınır:** Kontrol `data/parsed/` gerektirdiği için CI'da çalışmıyor (PDF'ler git'te yok, D9). CI yalnızca şemayı, yani kanıtın var olduğunu doğruluyor; alıntıların sayfalarda gerçekten geçtiğini yerel kontrol doğruluyor.
+- **Çeviriler:** Yeni soruların çevirileri elle kontrol edilmedi (`reviewed: false`). Ölçüm zaten ham çeviriyle yapılıyor (D32). Bilinen iki çeviri hatası:
+  - q26: "ilk şekil" çevrilmemiş.
+  - q30: cümle anlam olarak bozuk.
