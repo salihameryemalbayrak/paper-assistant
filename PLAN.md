@@ -45,10 +45,13 @@ Takvim yok; her aşama, "bitti" kriteri sağlanınca tamamlanmış sayılır.
 - Hakemin kaynak etiketini iddia sayıp cezalandırması düzeltildi.
 - Faithfulness doğruluk değil: Yanlış 6 cevaptan 3'ü 1,0 aldı (yanlış satır okuma, soruyu cevaplamama).
 
+**Referanslı doğruluk tamam (D40):** RAGAS AnswerAccuracy.
+- "≥ 0,5" eşiğinde elle etiketlerle 37/41 uyum. Hakeme göre doğru: 26/41.
+- Faithfulness'ın kaçırdığı q33 ve q26'yı yakalıyor.
+
 **Sıradaki:**
-1. (İsteğe bağlı) Referanslı doğruluk ölçütü: beklenen cevaplarla karşılaştıran hakem (D39).
-2. 7d Langfuse.
-3. 7e CI'da hızlı eval. (hakem LLM seçimi: ücretsiz, sabit), 7d Langfuse, 7e CI'da hızlı eval.
+1. 7d Langfuse iz kaydı.
+2. 7e CI'da hızlı eval.
 
 **Oturum başında:**
 1. Docker Desktop'ı aç → `docker compose -f infra/docker-compose.yml up -d qdrant`

@@ -6,7 +6,7 @@ import pytest
 
 pytest.importorskip("ragas")
 
-from eval.full import _number, summarize  # noqa: E402
+from eval.full import _number, applies, summarize  # noqa: E402
 
 
 def test_nan_and_none_become_not_scored():
@@ -21,7 +21,7 @@ def test_summary_counts_unscored_rows_and_groups_by_type():
         {"type": "table", "faithfulness": None, "answer_relevancy": 0.6},  # judge failed
         {"type": "figure", "faithfulness": 0.5, "answer_relevancy": None},
     ]
-    summary = summarize(rows)
+    summary = summarize(rows, ("faithfulness", "answer_relevancy"))
     assert summary["all"]["faithfulness"] == {"mean": 0.75, "n": 2, "not_scored": 1}
     assert math.isclose(summary["table"]["answer_relevancy"]["mean"], 0.7)
     assert summary["figure"]["answer_relevancy"] == {"mean": None, "n": 0, "not_scored": 1}
@@ -36,3 +36,12 @@ def test_judge_context_carries_citation_labels():
     doc = Document(page_content="x", metadata={"paper": "bge_m3", "pages": [7], "page": 7,
                    "section": "4.2 Results", "text": "Sparse is weak."})  # fmt: skip
     assert format_docs([doc]) == "[bge_m3, s.7, §4.2]\nSparse is weak."
+
+
+def test_which_rows_each_metric_scores():
+    answered = {"type": "table", "kind": "answer"}
+    refused = {"type": "table", "kind": "refusal"}
+    correct_refusal = {"type": "unanswerable", "kind": "refusal"}
+    assert applies("faithfulness", answered) and not applies("faithfulness", refused)
+    assert applies("answer_accuracy", refused)  # a refused answerable question scores 0
+    assert not applies("answer_accuracy", correct_refusal)

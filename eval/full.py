@@ -19,12 +19,20 @@ citation label (app.ask.format_docs). With bare chunk texts, the judge turned th
 answer's citation "[bge_m3, s.7, §4.2]" into a statement of its own and marked it
 unsupported: every cited answer lost points (D39).
 
-Refusals are not scored here (no statements); they are measured by eval.run --answers.
+- answer accuracy (reference-based; NVIDIA's dual judge): the judge compares the answer
+  with the expected answer and rates 0 / 2 / 4 (no / partial / full match), a second
+  prompt does the same with answer and reference swapped; score = mean / 4. Unlike
+  faithfulness this measures correctness: "faithful but wrong" answers fail (D39, D40).
+
+Faithfulness and relevancy skip refusals (no statements). Answer accuracy scores every
+answerable question: refusing one is a wrong answer, scored 0 without a judge call.
+Unanswerable questions are measured by refusal rate in eval.run --answers.
 Needs the "eval" dependency group (RAGAS, kept out of the app and CI).
 
 Usage:
     uv run --group eval python -m eval.full docs/benchmarks/answers/<file>.json
     uv run --group eval python -m eval.full <file>.json --limit 3   # a quick trial
+    uv run --group eval python -m eval.full <file>.json --metrics answer_accuracy
 """
 
 import argparse
@@ -79,23 +87,46 @@ def _number(value: float) -> float | None:
     return None if value is None or math.isnan(value) else round(value, 4)
 
 
-async def score_rows(rows: list[dict], chunks: dict, judge, embeddings) -> list[dict]:
-    from ragas.metrics.collections import AnswerRelevancy, Faithfulness
+METRICS = ("faithfulness", "answer_relevancy", "answer_accuracy")
 
-    faithfulness = Faithfulness(llm=judge)
-    relevancy = AnswerRelevancy(llm=judge, embeddings=embeddings, strictness=1)
+
+def applies(metric: str, row: dict) -> bool:
+    """Which rows a metric scores (see the module docstring)."""
+    if metric == "answer_accuracy":
+        return row["type"] != "unanswerable"
+    return row["kind"] != "refusal"
+
+
+async def score_rows(
+    rows: list[dict], chunks: dict, judge, embeddings, metrics: tuple[str, ...]
+) -> list[dict]:
+    from ragas.metrics.collections import AnswerAccuracy, AnswerRelevancy, Faithfulness
+
+    # build only the requested metrics: AnswerRelevancy rejects missing embeddings
+    factories = {
+        "faithfulness": lambda: Faithfulness(llm=judge),
+        "answer_relevancy": lambda: AnswerRelevancy(llm=judge, embeddings=embeddings, strictness=1),
+        "answer_accuracy": lambda: AnswerAccuracy(llm=judge),
+    }
+    scorers = {name: factories[name]() for name in metrics}
     scored = []
     for i, row in enumerate(rows, start=1):
         start = time.perf_counter()
-        # one string per chunk, label + text, as in the answer prompt
-        contexts = [format_docs([chunks[c]]) for c in row["context"]]
         out = {"id": row["id"], "type": row["type"], "kind": row["kind"]}
-        for name, metric, kwargs in [
-            ("faithfulness", faithfulness, {"retrieved_contexts": contexts}),
-            ("answer_relevancy", relevancy, {}),
-        ]:
+        for name in metrics:
+            if not applies(name, row):
+                continue
+            if name == "answer_accuracy" and row["kind"] == "refusal":
+                out[name] = 0.0  # refusing an answerable question is a wrong answer
+                continue
+            kwargs = {}
+            if name == "faithfulness":
+                # one string per chunk, label + text, as in the answer prompt
+                kwargs["retrieved_contexts"] = [format_docs([chunks[c]]) for c in row["context"]]
+            if name == "answer_accuracy":
+                kwargs["reference"] = row["expected"]
             try:
-                result = await metric.ascore(
+                result = await scorers[name].ascore(
                     user_input=row["question"], response=row["answer"], **kwargs
                 )
                 out[name] = _number(result.value)
@@ -103,16 +134,14 @@ async def score_rows(rows: list[dict], chunks: dict, judge, embeddings) -> list[
                 out[name], out[f"{name}_error"] = None, f"{type(e).__name__}: {e}"[:300]
         out["seconds"] = round(time.perf_counter() - start, 1)
         scored.append(out)
-        print(
-            f"[{i}/{len(rows)}] {row['id']} faithfulness={out['faithfulness']} "
-            f"relevancy={out['answer_relevancy']} ({out['seconds']}s)",
-            flush=True,
-        )
+        values = " ".join(f"{m}={out[m]}" for m in metrics if m in out)
+        print(f"[{i}/{len(rows)}] {row['id']} {values} ({out['seconds']}s)", flush=True)
     return scored
 
 
-def summarize(scored: list[dict]) -> dict:
+def summarize(scored: list[dict], metrics: tuple[str, ...] = METRICS) -> dict:
     def stats(rows: list[dict], key: str) -> dict:
+        rows = [r for r in rows if key in r]  # rows the metric applies to
         values = [r[key] for r in rows if r[key] is not None]
         return {"mean": round(mean(values), 4) if values else None, "n": len(values),
                 "not_scored": len(rows) - len(values)}  # fmt: skip
@@ -120,10 +149,7 @@ def summarize(scored: list[dict]) -> dict:
     groups = {"all": scored}
     for row in scored:
         groups.setdefault(row["type"], []).append(row)
-    return {
-        group: {m: stats(rows, m) for m in ("faithfulness", "answer_relevancy")}
-        for group, rows in groups.items()
-    }
+    return {group: {m: stats(rows, m) for m in metrics} for group, rows in groups.items()}
 
 
 def main() -> None:
@@ -134,20 +160,23 @@ def main() -> None:
 
     parser = argparse.ArgumentParser(description=__doc__.splitlines()[0])
     parser.add_argument("answers", type=Path, help="answers file from eval.run --answers")
-    parser.add_argument("--limit", type=int, help="score only the first N answered questions")
+    parser.add_argument("--limit", type=int, help="score only the first N questions")
+    parser.add_argument(
+        "--metrics", nargs="+", choices=METRICS, default=list(METRICS), help="default: all"
+    )
     args = parser.parse_args()
+    metrics = tuple(m for m in METRICS if m in args.metrics)
 
     settings = get_settings()
     source = json.loads(args.answers.read_text(encoding="utf-8"))
-    rows = [r for r in source["per_question"] if r["kind"] != "refusal"]
+    rows = [r for r in source["per_question"] if any(applies(m, r) for m in metrics)]
     if args.limit:
         rows = rows[: args.limit]
     chunks = {c.id: chunk_to_document(c) for c in load_chunks()}
 
     start = time.perf_counter()
-    scored = asyncio.run(
-        score_rows(rows, chunks, build_judge(settings), E5Embeddings(source["embedding_model"]))
-    )
+    embeddings = E5Embeddings(source["embedding_model"]) if "answer_relevancy" in metrics else None
+    scored = asyncio.run(score_rows(rows, chunks, build_judge(settings), embeddings, metrics))
     elapsed = time.perf_counter() - start
 
     result = {
@@ -159,23 +188,26 @@ def main() -> None:
         "answering_llm": source["llm"],
         "judge": f"{settings.judge_model} @ {settings.judge_base_url or settings.llm_base_url}",
         "judge_temperature": 0.0,
-        "ragas_metrics": "ragas.metrics.collections Faithfulness, AnswerRelevancy(strictness=1)",
+        "metrics": list(metrics),
+        "ragas_metrics": "ragas.metrics.collections Faithfulness, AnswerRelevancy(strictness=1), "
+        "AnswerAccuracy",
         "faithfulness_context": "chunks under their citation labels, as in the answer prompt",
         "answer_relevancy_embeddings": source["embedding_model"],
+        "answer_accuracy_refusals": "scored 0 without a judge call",
         "scored": len(scored),
-        "refusals_skipped": sum(r["kind"] == "refusal" for r in source["per_question"]),
         "limit": args.limit,
         "seconds_total": round(elapsed),
         "seconds_per_question_median": median(r["seconds"] for r in scored) if scored else None,
-        "summary": summarize(scored),
+        "summary": summarize(scored, metrics),
         "per_question": scored,
     }
     print(json.dumps(result["summary"]["all"], indent=2))
 
     judge_slug = re.sub(r"[^a-z0-9]+", "_", settings.judge_model.lower()).strip("_")
     limit = f"_limit{args.limit}" if args.limit else ""
+    subset = "" if metrics == METRICS else "_" + "+".join(metrics)
     FULL_DIR.mkdir(parents=True, exist_ok=True)
-    out = unique_path(FULL_DIR / f"{args.answers.stem}_judge_{judge_slug}{limit}.json")
+    out = unique_path(FULL_DIR / f"{args.answers.stem}_judge_{judge_slug}{subset}{limit}.json")
     out.write_text(json.dumps(result, indent=2, ensure_ascii=False) + "\n", encoding="utf-8")
     print(f"saved -> {out}")
 

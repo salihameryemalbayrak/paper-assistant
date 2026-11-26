@@ -691,3 +691,45 @@ Her karar için:
   2. **Hakem de hata yapar** (q22). Puanlar bir ölçüm aracıdır, gerçek değildir. Hakemin kendisi de örnekleme ile kontrol edilmeli.
   3. **Doğruluk için referans gerekir:** Beklenen cevaplar elimizde. RAGAS'ın referanslı ölçütleri (ör. answer correctness / factual correctness) ya da beklenen cevapla karşılaştıran bir hakem prompt'u bir sonraki adım olabilir; aynı hakemle ölçülmeli.
 - **Süre:** 30 cevap ~1,5 saat. Bu yüzden tam eval CI'da değil, birleştirmeden önce yerelde çalışıyor (CLAUDE.md'deki iki katmanlı eval).
+
+### D40. Referanslı doğruluk: RAGAS AnswerAccuracy, elle etiketlerle %90 uyum
+- **Neden:** Faithfulness doğruluğu ölçmüyor; "sadık ama yanlış" cevaplara tam puan veriyor (D39, q33). Beklenen cevaplar elimizde olduğu için cevabı doğrudan onlarla karşılaştıran bir ölçüt eklendi.
+- **Değerlendirilen RAGAS ölçütleri** (kaynak kodundan):
+  - **AnswerAccuracy** (NVIDIA'nın çift hakem yaklaşımı): Hakem cevabı referansla karşılaştırıp 0 (uyuşmuyor), 2 (kısmen) ya da 4 (tam) diyor. İkinci bir prompt aynı işi cevap ile referansın yerleri değiştirilmiş olarak yapıyor. Puan = iki puanın ortalaması / 4. 0,25 ve 0,75, iki hakemin farklı karar verdiği durumlar. Soru başına 2 kısa çağrı. **Seçildi.**
+  - FactualCorrectness: Cevap ve referans iddialara bölünüp iki yönde karşılaştırılıyor. Elendi: beklenen cevaplarımız ayrıntılı, kısa ama doğru cevaplar recall yönünde haksız ceza alır.
+  - AnswerCorrectness: İddia düzeyinde F1 + embedding benzerliği. Elendi: benzerlik "konudan bahsetmeyi" ödüllendirir, q33 tipi hataları gizler.
+- **Tasarım:**
+  - Bütün cevaplanabilir sorular (41) puanlanıyor. Ret cevabı yanlış bir cevaptır; LLM'e sorulmadan 0 alıyor.
+  - "Dokümanda yok" soruları burada değil, ret oranıyla ölçülüyor.
+  - RAGAS, bozuk JSON'da yeniden deneyip sessizce `NaN` döndürüyor; bizim kodumuz `NaN`'ı sayıyor (bu koşuda 0).
+  - `--metrics answer_accuracy` ile yalnızca bu ölçüt çalışıyor: 41 soru 9 dakika (faithfulness ile birlikte ~1,5 saat).
+- **Sonuç** (derinlik 20 cevapları, gemma3:12b, Apple M4):
+  - Ortalama 0,433.
+  - Puan dağılımı: 0 → 11 soru, 0,25 → 4, 0,5 → 14, 0,75 → 9, 1,0 → 3.
+
+| "Doğru" eşiği | Hakeme göre doğru | Elle etiketlerle uyum |
+|---|---|---|
+| **≥ 0,5** (kısmen ya da tam) | 26 (elle: 24) | **37/41 (%90)** |
+| = 1,0 (tam) | 3 | 20/41 |
+
+- **Faithfulness'ın kaçırdıklarını yakalıyor:** q33 (yanlış tablo satırı) 0,25, q26 0,25, q21 0,25. Faithfulness q33 ve q26'ya 1,0 vermişti.
+- **Ayrışmalar (≥ 0,5 eşiğinde, 4 soru):**
+  - q44, q39, q14: Hakem 0,5 verdi, elle "yanlış" saymıştım. Üçü de yarı doğru: q44'te en iyi yöntem doğru, "ReAct daha mı iyi?" yanlış; q39'da E5 kısmı doğru, Contriever kısmı eksik. Elle değerlendirmede karşılaştırma ve evet/hayır sorularında daha katı davranmışım.
+  - q23: Elle doğru, hakem < 0,5. Cevap doğru sonuca varıyor ama beklenen cevaptaki "~100B parametre" bilgisini atlıyor.
+- **Eşik seçimi:** Sonuçlara bakıldıktan sonra seçildi. Ama yalnızca iki doğal seçenek karşılaştırıldı ("kısmen veya daha iyi" ve "tam"); uyumu artırmak için ara değerler denenmedi.
+  - "= 1,0" kullanışsız: NVIDIA prompt'u "bütün sayılar ve terimler eşdeğer" diyor; ayrıntılı referanslarımız yüzünden doğru cevapların çoğu 0,5–0,75 alıyor.
+- **Türlere göre ortalama:**
+
+| Tür | Ortalama |
+|---|---|
+| Tek sayfa | 0,600 |
+| Karşılaştırma | 0,500 |
+| Şekil | 0,281 |
+| Tablo | **0,250** |
+
+  - Tablo zayıflığı (D36, D38) otomatik ölçümde de görülüyor.
+- **Karar:** Tam eval'in ana doğruluk ölçütü "answer accuracy ≥ 0,5 oranı" (bu koşuda 26/41). Ortalama ile birlikte raporlanacak. Elle sayım artık yalnızca hakemi örnekleme ile kontrol etmek için yapılacak.
+- **Sınırlar:**
+  - Tek koşu, tek hakem.
+  - Referansları cevap modeliyle aynı bilgiden ben (Claude) yazdım. 20'si elle, 29'u kanıtla doğrulandı (D35).
+  - %90 uyum 41 soruya dayanıyor; ayrışan 4 sorunun hepsi "yarı doğru" türünden.
