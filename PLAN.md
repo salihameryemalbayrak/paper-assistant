@@ -15,49 +15,42 @@ Takvim yok; her aşama, "bitti" kriteri sağlanınca tamamlanmış sayılır.
 
 ## Nerede kaldık (son oturum: 2026-11-26)
 
-**Durum:** Aşama 0–6 tamam. Aşama 7 başladı.
-- **7a, derlemi büyütme: tamam.** 5 → 18 makale, 1734 chunk. İki ingest düzeltmesi yapıldı (yazar adları başlık sanılıyordu; uzun tablo altyazıları her parçada tekrarlanıyordu). Gerileme ölçüldü: R@5 0,781 → 0,688, doğru cevap 10 → 9. Ayrıntı: D34.
-- Aşama 6 yoklaması yapıldı.
+**Durum:** Aşama 0–6 tamam. Aşama 7'de 7a–7c tamam, sırada 7d (Langfuse) ve 7e (CI'da hızlı eval) var. Her şey commit edilip push edildi.
 
-**7b tamam: eval seti 49 soru** (D35).
-- [x] `phrasing` alanı (`term` / `paraphrase` / `inference`). Sonuçlar ifade biçimine göre de gruplanıyor. Kaynakla nadir terim örtüşmesi kontrolü: `eval.check_phrasing`.
-- [x] Kanıtla doğrulama (`evidence`, `absent_terms`, `eval.check_evidence`). Kullanıcı elle kontrol istemedi (D35).
-- [x] 1. parti (q21–q30): 9/10 `paraphrase` ya da `inference`.
-  - İlk ölçüm (R@5): `term` 0,714, `paraphrase` 0,357, `inference` 0,375.
-  - Şekil sorularında zayıf: q26 ve q27 ilk 10'da yok.
-- [x] 2. parti (q31–q40): 3 tablo, 3 şekil, 2 tek sayfa, 1 karşılaştırma, 1 yok.
-  - 34 cevaplanabilir soruyla R@5: `term` 0,733, `paraphrase` 0,542, `inference` 0,571.
-  - En zayıf grup şekil soruları: R@5 0,500, R@1 0.
-- [x] 3. parti (q41–q49).
-  - Son durum: R@5 0,671 (41 cevaplanabilir soru). `term` 0,750, `paraphrase` 0,607, `inference` 0,636.
-  - En zayıf gruplar: şekil (0,500) ve karşılaştırma (0,438).
+**Aşama 7'de yapılanlar:**
+- **7a, derlem:** 5 → 18 makale, 1734 chunk. Yazar adlarının başlık sanılması ve uzun tablo altyazılarının her parçada tekrarlanması düzeltildi (D34).
+- **7b, eval seti:** 49 soru.
+  - İfade biçimi etiketleri: `term` / `paraphrase` / `inference`.
+  - Doğrulama: 20'si elle, 29'u kanıtla (`eval.check_evidence`, D35).
+- **Chunk düzeyinde ölçüt (evidence recall, D37) ve kol derinliği 20 (D38):** Hızlı eval artık LLM'in gördüğü bağlamı ölçüyor.
+- **7c, tam eval (D39, D40):** RAGAS + yerel hakem `gemma3:12b`, ayrı `eval` bağımlılık grubu.
 
-- Her partiden sonra: `eval.translations --missing` → `eval.check_evidence` → `eval.check_phrasing` → hızlı eval.
+**Güncel ölçümler** (`dense_tr_bm25_en`, derinlik 20, e5-small, qwen3:4b-instruct, 18 makale, Apple M4):
 
-**49 soruyla cevap eval (baseline) tamam (D36):** 8/8 doğru ret, 24/41 doğru cevap. Tablolarda arama R@5 1,0 ama yalnızca 2/10 doğru cevap. Nedenler: 3 soruda gereken satır bağlamda yok (chunk düzeyi), 3 soruda model okuyamıyor.
+| Ölçüt | Değer |
+|---|---|
+| Hızlı eval: sayfa R@5 / MRR | 0,768 / 0,509 |
+| Hızlı eval: evidence recall@5 | 0,587 |
+| Cevap eval: doğru ret | 8/8 |
+| Elle doğru cevap | 24/41 |
+| Tam eval: faithfulness | 0,910 |
+| Tam eval: answer relevancy | 0,877 |
+| Tam eval: answer accuracy | ortalama 0,433; ≥ 0,5 olan 26/41 (elle etiketlerle %90 uyum) |
 
-**Evidence recall eklendi (D37):** Chunk düzeyinde R@5 0,540 (sayfa düzeyinde 0,671). Karşılaştırma sorularında complete@5 = 0.
-- Bulunan tutarsızlık: Hızlı eval k=10 ile, cevap zinciri k=5 ile kuruluyor; hibritte iki "ilk 5" farklı.
+**Sıradaki iş, 7d Langfuse.** Önce kullanıcı kararı gerekiyor:
+- **Self-host (`obs` profili, Docker):** Ücretsiz, veri dışarı çıkmaz. Ama Postgres, ClickHouse, Redis ve MinIO'dan oluşan ağır bir yapı; 16 GB RAM ve ~23 GB boş disk zorlayabilir.
+- **Langfuse Cloud ücretsiz katmanı:** Kurulum yok, ama izler dışarı gider. Açık lisanslı derlem için sorun değil.
+- Karardan sonra: LangChain callback entegrasyonu (paket ve sürüm, kaynak kodundan doğrulanacak). `LANGFUSE_*` yoksa kod iz göndermeden çalışmalı.
 
-**Kol derinliği 20 eklendi (D38):** LLM'e giden kanıt 0,447 → 0,587. Doğru cevap 24/41'de kaldı. Darboğaz artık LLM'in tablo okuması (q44: satırlar bağlamda, cevap yanlış).
-
-**7c RAGAS tamam (D39):** Hakem gemma3:12b (yerel). Faithfulness 0,910, answer relevancy 0,877 (30 cevap, ~1,5 saat).
-- Hakemin kaynak etiketini iddia sayıp cezalandırması düzeltildi.
-- Faithfulness doğruluk değil: Yanlış 6 cevaptan 3'ü 1,0 aldı (yanlış satır okuma, soruyu cevaplamama).
-
-**Referanslı doğruluk tamam (D40):** RAGAS AnswerAccuracy.
-- "≥ 0,5" eşiğinde elle etiketlerle 37/41 uyum. Hakeme göre doğru: 26/41.
-- Faithfulness'ın kaçırdığı q33 ve q26'yı yakalıyor.
-
-**Sıradaki:**
-1. 7d Langfuse iz kaydı.
-2. 7e CI'da hızlı eval.
+**Sonra:**
+- 7e: CI'da hızlı eval (Qdrant gerektiriyor; bellekteki Qdrant ya da önceden hesaplanmış vektörler).
+- Aşama 7 yoklaması.
 
 **Oturum başında:**
 1. Docker Desktop'ı aç → `docker compose -f infra/docker-compose.yml up -d qdrant`
-2. Ollama çalışmıyorsa `ollama serve` (model: `qwen3:4b-instruct`)
+2. Ollama çalışmıyorsa `ollama serve`. Cevap modeli `qwen3:4b-instruct`, hakem `gemma3:12b` (yalnızca tam eval'de).
 3. Ortamın sağlam olduğunu doğrula:
-   - `uv run pytest` (112 test geçmeli; RAGAS kurulu değilse 3'ü atlanır)
+   - `uv run pytest` (113 test geçmeli; RAGAS kurulu değilse 4'ü atlanır)
    - `uv run python -m eval.run --fast --retriever dense_tr_bm25_en` (18 makale, 49 soru, derinlik 20: Recall@5 0,768, MRR 0,509, evidence recall@5 0,587 çıkmalı)
 
 **Bilinen hatalar ve sınırlamalar:**
@@ -81,8 +74,8 @@ Takvim yok; her aşama, "bitti" kriteri sağlanınca tamamlanmış sayılır.
 - **Hızlı eval Qdrant gerektiriyor:** CI'da henüz çalışmıyor (Aşama 7'de bellekteki Qdrant veya önceden hesaplanmış vektörlerle çözülecek).
 - Docling'in testlerde verdiği 3 DeprecationWarning zararsız (Docling'in kendi kodundan).
 
-**Diskte bekleyen, kullanıcı kararı gereken:**
-- `qwen3:4b` (2,5 GB, artık kullanılmıyor).
+**Diskte bekleyen, kullanıcı kararı gereken** (boş alan ~23 GB):
+- `gemma3:12b` (8,2 GB): tam eval hakemi, tutuluyor.
 - bge-m3 modeli ve koleksiyonu (~2,3 GB). Koleksiyon hâlâ eski 5 makaleyle kurulu; Aşama 7'de karşılaştırma yapılacaksa yeniden indekslenmeli.
 - Reranker modelleri: bge-reranker-v2-m3 ~2,3 GB, MiniLM ~90 MB (D33, varsayılan kapalı).
 
