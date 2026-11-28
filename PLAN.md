@@ -53,7 +53,10 @@ Takvim yok; her aşama, "bitti" kriteri sağlanınca tamamlanmış sayılır.
 - [x] 8b Streamlit arayüzü, PDF'i ilgili sayfada açan kaynak bağlantıları (D44).
 - [x] 8c Docker: API ve arayüz imajları; compose profilleri `dev` / `gpu` / `obs`; CI'da amd64 derlemesi. Langfuse kapalıyken oluşan yavaşlık düzeltildi (D45).
 - [x] Varsayılan retriever `hybrid_en` oldu (D46). README tablosu için yapılan ölçümde D32'nin kararı tersine döndü: evidence recall@5 0,587 → 0,707, answer accuracy ≥ 0,5 26/41 → 29/41.
-- [ ] 8d README: mimari diyagram, sonuç tabloları, ekran görüntüsü.
+- [x] 8d README: Mermaid mimari diyagramı, sonuç tabloları (her sayı kayıtlı sonuç dosyalarıyla karşılaştırıldı), bulgular, ekran görüntüsü (`docs/images/ui.png`).
+  - Ekran görüntüsü varsayılan `hybrid_en` ile yeniden alınmalı (ilk görüntü eski varsayılanla alındı).
+  - **Test edilmedi:** "Temiz bir makinede README adımlarıyla çalışıyor" kriteri. Her şey yalnızca bu Mac'te denendi. CI imajları amd64'te derliyor ve testleri çalıştırıyor, ama uçtan uca kurulumu denemiyor.
+- **Aşama 8 tamam.** Sıradaki: Aşama 8 yoklaması, ardından Aşama 9 (model karşılaştırma matrisi) ya da G1 (LangGraph).
 
 **Oturum başında:**
 1. Docker Desktop'ı aç → `docker compose -f infra/docker-compose.yml up -d qdrant`
@@ -431,7 +434,7 @@ Türkçe soru ──► TR→EN çeviri ──► BM25(EN) + Dense(TR, EN) ─�
 - [x] Aşama 5 — Hibrit arama + sorgu çevirisi (varsayılan: `dense_tr_bm25_en`, D32)
 - [x] Aşama 6 — Reranker (varsayılan kapalı: cevap kazancı ölçülmedi, D33)
 - [x] Aşama 7 — Tam eval + Langfuse (49 soru, RAGAS + yerel hakem, Langfuse self-host, CI'da hızlı eval)
-- [ ] Aşama 8 — API + arayüz + Docker Compose
+- [x] Aşama 8 — API + arayüz + Docker Compose (FastAPI, Streamlit, Docker; temiz makine testi yapılmadı)
 - [ ] Aşama 9 — Model karşılaştırma matrisi
 - [ ] G1 — LangGraph agentic akış
 - [ ] G2 — Guardrails

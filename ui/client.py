@@ -23,7 +23,8 @@ class ApiError(Exception):
 
 EXAMPLES = [
     "QLoRA hangi üç yenilikle bellek tasarrufu sağlıyor?",
-    "Mistral 7B, MMLU'da Llama 2 13B'yi kaç puan geçiyor?",
+    "vLLM makalesine göre, mevcut sunucu sistemleri ayırdıkları belleğin ne kadarını "
+    "gerçekten token'ları saklamak için kullanabiliyor?",
     "Ragas ve ARES bir RAG sistemini nasıl değerlendiriyor, farkları ne?",
     "vLLM, Apple'ın M serisi işlemcilerinde ne kadar hızlı çalışıyor?",  # not in the papers
 ]
