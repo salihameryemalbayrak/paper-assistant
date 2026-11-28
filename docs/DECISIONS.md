@@ -962,7 +962,10 @@ Her karar için:
     - gemma3:12b hakem olduğu için cevap modeli olamazdı (self-preference, D39).
     - phi4 ağırlıklı olarak İngilizce.
   - **Ticari API ölçülmedi:** Proje ücretsiz kalıyor (CLAUDE.md, maliyet kuralı).
-  - **vLLM benchmark'ı (Colab) şimdilik ertelendi:** Notebook Colab'da `Engine core initialization failed` hatası verdi; asıl neden (hatanın üstündeki satırlar) henüz görülmedi. Notebook geri alındı.
+  - **vLLM benchmark'ı (Colab) ertelendi:** Colab'ın ücretsiz T4'üne bağlanılamadı ve notebook kaldırıldı.
+    - Önceki denemelerdeki hatanın kök nedeni bulundu: vLLM 0.31–0.34 GPU'da açılırken `cutlass` modülünü import ediyor.
+    - Modül kurulu ama `.pth` dosyasıyla yalnızca Python açılırken bulunabiliyor. Kurulumdan önce açılmış notebook oturumu onu görmüyor.
+    - T4'te FlashAttention 2 yok; Triton attention seçilmeli.
 - **Deney tasarımı: tek değişken cevap modeli.**
   - Çeviri modeli `TRANSLATE_MODEL` ile ayrıldı ve karşılaştırmada hep qwen3:4b. Böylece arama ve bağlam iki modelde aynı.
   - Doğrulandı: 49 sorunun 49'unda bağlamdaki 5 chunk birebir aynı.
@@ -1008,3 +1011,12 @@ Her karar için:
   - Daha güçlü donanımda (GPU sunucusu, `gpu` profili) büyük model, kod değişmeden yalnızca `LLM_MODEL` ile kullanılabilir.
   - Tablo ve çıkarım sorularını küçük modelle iyileştirmenin yolları: tablo okuma aracı (G1, LangGraph), tabloları satır satır metne çevirmek (D36).
 - **Sınırlar:** 41 soru, tek koşu, tek hakem (hakem sayılarda cömert, q33). Hız ölçümleri tek bilgisayarda; vLLM ve GPU ölçülmedi.
+
+### D49. OCR kapsamdan çıkarıldı
+- **Durum:** CLAUDE.md'nin ilk sürümü taranmış sayfalar için OCR istiyordu. Derlemdeki 18 makalenin hepsi dijital PDF (arXiv): metin katmanı var, OCR'a gerek yok.
+- **Karar (kullanıcı):** OCR temel sürümden çıkarıldı.
+- **Neden:**
+  - Açık lisanslı (CC BY / CC0), taranmış ve konuya uygun bir makale bulmak zor. Bulunsa bile tek belgeyle ölçülen OCR kalitesi anlamlı bir sonuç vermezdi.
+  - Ölçülemeyen bir özellik eklemek projenin "her sayı ölçümden gelir" kuralına ters.
+- **Kodda ne var:** `ingest/parse.py` Docling'i varsayılan ayarla çalıştırıyor. O ayarda OCR açık (`PdfPipelineOptions().do_ocr` → `True`, kurulu sürümde kontrol edildi). Yani görsel olarak gömülü metin alanları OCR'dan geçebiliyor. Ama bunun kalitesi test edilmedi ve ölçülmedi; "taranmış belgeyi destekliyor" denmez.
+- **Gerekirse:** Taranmış sayfalı, açık lisanslı bir belge ile bir eval sorusu eklenir ve OCR kalitesi ölçülür. Chunking ve arama değişmez.

@@ -65,8 +65,9 @@ Takvim yok; her aşama, "bitti" kriteri sağlanınca tamamlanmış sayılır.
 - [x] Hız ölçümü (`eval.llm_speed`). Docker kapalıyken; takas sonuçla birlikte kaydediliyor.
 - [x] `TRANSLATE_MODEL`, `--stored-translations`, p95 gecikme.
 - [ ] Ticari API: kullanıcı kararıyla ölçülmedi (ücretsiz kalınıyor).
-- [ ] vLLM benchmark (Colab, T4): Notebook `Engine core initialization failed` verdi, geri alındı. Kullanıcı sonra deneyecek; hatanın asıl nedeni (üstteki satırlar) gerekiyor.
+- [ ] vLLM benchmark (Colab, T4): **ertelendi** (kullanıcı kararı; Colab'da T4'e bağlanılamadı, notebook kaldırıldı). Bulunan kök neden, tekrar denenirse diye: vLLM 0.31–0.34 CUDA'da warm-up'ta koşulsuz `cutlass` import ediyor. Modül kurulu (`nvidia-cutlass-dsl`), ama yolu bir `.pth` dosyasıyla yalnızca Python açılırken ekleniyor. Notebook çekirdeği kurulumdan önce açık olduğu için görmüyor. Çözüm: kurulumdan sonra oturumu yeniden başlatmak ya da `nvidia_cutlass_dsl/dsl_packages`'ı `sys.path`'e eklemek. T4'te FA2 yok, `attention_backend="TRITON_ATTN"` gerekiyor.
 - [ ] Prefill (prompt işleme) süresinin önbelleksiz ölçümü.
+- [ ] **Bilinen sorun (README testinde görüldü):** qwen3:4b-instruct Türkçe cevaba bazen Çince kelime karıştırıyor (Ragas sorusunda "检索" = retrieval). 14B'nin q02 çöküşüne benzer. Önce ölçülmeli: cevaplarda CJK karakteri sayan bir sayaç; sonra gerekiyorsa prompt kuralı (ölçümle).
 - Sıradaki: Aşama 9 yoklaması, ardından G1 (LangGraph: tablo okuma aracı, belge karşılaştırma).
 
 **Oturum başında:**
@@ -110,7 +111,7 @@ Takvim yok; her aşama, "bitti" kriteri sağlanınca tamamlanmış sayılır.
 
 ```
              ┌───────────── ingest (bir kez) ─────────────┐
-PDF'ler ──► ayrıştır + OCR ──► chunk (sayfa/bölüm/tür metadata) ──► Qdrant + BM25 indeksi
+PDF'ler ──► ayrıştır ──────► chunk (sayfa/bölüm/tür metadata) ──► Qdrant + BM25 indeksi
 
              ┌───────────── sorgu (her soru) ─────────────┐
 Türkçe soru ──► TR→EN çeviri ──► BM25(EN) + Dense(TR, EN) ──► RRF ──► reranker
@@ -442,12 +443,12 @@ Türkçe soru ──► TR→EN çeviri ──► BM25(EN) + Dense(TR, EN) ─�
 - [x] Aşama 0 — İskelet
 - [x] Aşama 1 — Veri
 - [x] Aşama 2 — Eval seti
-- [x] Aşama 3 — Ingest (OCR testi ertelendi: taranmış belge yok)
+- [x] Aşama 3 — Ingest (OCR kapsamdan çıkarıldı, D49)
 - [x] Aşama 4 — Dense + basit RAG (baseline: e5-small, qwen3:4b-instruct)
-- [x] Aşama 5 — Hibrit arama + sorgu çevirisi (varsayılan: `dense_tr_bm25_en`, D32)
+- [x] Aşama 5 — Hibrit arama + sorgu çevirisi (D32; varsayılan D46'dan beri `hybrid_en`)
 - [x] Aşama 6 — Reranker (varsayılan kapalı: cevap kazancı ölçülmedi, D33)
 - [x] Aşama 7 — Tam eval + Langfuse (49 soru, RAGAS + yerel hakem, Langfuse self-host, CI'da hızlı eval)
-- [x] Aşama 8 — API + arayüz + Docker Compose (FastAPI, Streamlit, Docker; temiz makine testi yapılmadı)
+- [x] Aşama 8 — API + arayüz + Docker Compose (FastAPI, Streamlit, Docker; README Quickstart testi 2026-11-28: GitHub'dan temiz kopya, 11 adım çalıştı, `chunks.jsonl` byte byte aynı, hızlı eval aynı sayılar)
 - [ ] Aşama 9 — Model karşılaştırma matrisi (4B ↔ 14B tamam; vLLM/Colab ve ticari API yok, D48)
 - [ ] G1 — LangGraph agentic akış
 - [ ] G2 — Guardrails
@@ -466,4 +467,4 @@ Türkçe soru ──► TR→EN çeviri ──► BM25(EN) + Dense(TR, EN) ─�
 - fastembed BM25 (kök bulmalı) ile bizim BM25'in (sayıları bölmeyen) karşılaştırması: isteğe bağlı deney (D29).
 - Şekiller için VLM açıklaması gerekecek mi, yoksa caption yeterli mi? (Şekil sorularının eval sonucuna göre karar verilecek.)
 - ~~Derlem konusu~~ → RAG / arama / LLM makaleleri (bkz. DECISIONS D8). Sıradaki CC BY adaylar: ReAct (2210.03629), Chain-of-Thought (2201.11903), vLLM/PagedAttention (2309.06180).
-- OCR testi için taranmış sayfa: arXiv PDF'leri dijital; Aşama 3'te açık lisanslı, taranmış bir belge bulunacak.
+- ~~OCR testi için taranmış sayfa~~ → OCR kapsamdan çıkarıldı (D49).

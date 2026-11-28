@@ -14,7 +14,7 @@ Zorluk modelde değil **aramada**. Hedef, küçük bir yerel model (3–4B) ile 
 
 ## Kapsam
 **Temel sürüm (öncelik):**
-- PDF işleme: metin, tablo, şekil, taranmış sayfa (OCR). Sayfa ve bölüm metadata'sı korunur.
+- PDF işleme: metin, tablo, şekil (dijital PDF; OCR kapsam dışı, DECISIONS D49). Sayfa ve bölüm metadata'sı korunur.
 - Embedding + Qdrant, BM25 ile hibrit arama, TR→EN sorgu çevirisi, reranker.
 - Kaynaklı cevap üretimi. Kaynakta yoksa "Dokümanda bulamadım." denir.
 - Eval seti + otomatik metrikler.
@@ -137,7 +137,7 @@ Kodun tamamını sen yazarsın. Ben kodu okuyup anlayacağım, sorular soracağ�
 ## Repo yapısı (öneri)
 ```
 app/            # FastAPI, retrieval, agent, LLM istemcisi, config
-ingest/         # PDF işleme, OCR, chunking, indeksleme
+ingest/         # PDF işleme, chunking, indeksleme
 eval/           # eval seti, metrikler, karşılaştırma betikleri
 ui/             # Streamlit arayüz
 infra/          # docker-compose.yml (dev/gpu/obs profilleri)
@@ -182,6 +182,7 @@ Repo iskeleti oluştukça doldurulacak:
 - Ham makale PDF'lerini repoya koymak
 - Eval ölçümü olmadan retrieval veya prompt değişikliği birleştirmek
 - Sorgu anında görsel model (VLM) çalıştırmak
+- Taranmış PDF'ler için OCR (D49)
 - Kimlik doğrulamalı / çok kullanıcılı arayüz
 - Kubernetes, canlı demo veya bulut dağıtımı (README'de ekran görüntüsü/GIF yeterli)
 - LlamaIndex
