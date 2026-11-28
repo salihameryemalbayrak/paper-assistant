@@ -733,3 +733,74 @@ Her karar için:
   - Tek koşu, tek hakem.
   - Referansları cevap modeliyle aynı bilgiden ben (Claude) yazdım. 20'si elle, 29'u kanıtla doğrulandı (D35).
   - %90 uyum 41 soruya dayanıyor; ayrışan 4 sorunun hepsi "yarı doğru" türünden.
+
+### D41. Langfuse: yerelde Docker ile (self-host v4), LangChain callback'i
+- **Karar:** Langfuse yerelde, `infra/docker-compose.obs.yml` (profil `obs`).
+  - Gerekçeler: Ücretsiz; izler (sorular, getirilen parçalar) bilgisayardan çıkmıyor. Kişisel belgelerle çalışılırsa önemli.
+  - Alternatif: Langfuse Cloud ücretsiz katmanı. Kurulum yok, ama veri dışarı gidiyor.
+- **Kaynaktan doğrulananlar** (tahmin edilmedi):
+  - Sunucu artık **v4**. Resmî compose dosyası (langfuse/langfuse `main`) okundu; imajlar en son sürüme, **4.88.0**'a sabitlendi (neredeyse her gün sürüm çıkıyor).
+  - Python SDK **5.2.0**. İzleri OpenTelemetry ile gönderiyor; bağımlılıkları hafif (`langchain-community` yok). Ekleyince hiçbir paketin sürümü düşmedi.
+- **Resmî dosyadan farklar:**
+  - AI gateway yok. LLM çağrılarını Langfuse üzerinden yönlendiren isteğe bağlı bir proxy; hiçbir servis ona bağımlı değil.
+  - `TELEMETRY_ENABLED=false`: Langfuse'a kullanım istatistiği gitmiyor.
+  - Bilgisayara açılan tek port web arayüzü (3000), o da yalnızca `127.0.0.1`'e. Resmî dosyada 3000 ve MinIO'nun portu bütün ağ arayüzlerine açıktı. Diğer servisler yalnızca Docker'ın iç ağında.
+  - ~100 ortam değişkeninden yalnızca gerekenler alındı.
+  - İlk açılışta organizasyon, proje, API anahtarları ve giriş kullanıcısı `LANGFUSE_INIT_*` ile otomatik oluşturuluyor; arayüzde kayıt gerekmiyor. Giriş e-postası yerel bir ad (`admin@example.com`); gerçek adres kullanılmadı.
+- **Ayrı compose dosyası neden:** Parolalar `${VAR:?...}` ile zorunlu; eksikse açık bir hata veriliyor. Ama compose bu kontrolü profili kapalı servisler dahil dosyanın tamamında yapıyor. Ana dosyada olsaydı, `infra/.env` olmayan bir makinede (ör. yeni bir klon) `docker compose up -d qdrant` da hata verirdi. Bu test edilerek görüldü.
+- **Parolalar:** `infra/make_secrets.py`, `secrets` modülüyle (kriptografik rastgelelik) üretip `infra/.env` dosyasına yazıyor (izin 600, git'e girmiyor).
+  - Dosya varsa üzerine yazmıyor: veritabanları ilk parolalarıyla kuruldu, yeni parolalar Langfuse'u kendi verisinden kilitler.
+  - Uygulamanın 3 ayarını (`LANGFUSE_PUBLIC_KEY`, `LANGFUSE_SECRET_KEY`, `LANGFUSE_BASE_URL`) ana `.env`'ye ekliyor.
+  - Hiçbir parolayı ekrana yazdırmıyor.
+- **Uygulama tarafı (`app/tracing.py`):**
+  - LangChain her adımın başında ve sonunda callback'leri çağırıyor. Langfuse'un `CallbackHandler`'ı bu olaylardan soru başına iç içe bir iz ağacı kuruyor: girdiler, çıktılar, süreler, token sayıları.
+  - **Tuzak:** `pydantic-settings` `.env`'yi okuyor ama ortam değişkenlerine yazmıyor; SDK ise yalnızca ortam değişkenlerine bakıyor. Bu yüzden istemci ayarlardan açıkça oluşturuluyor (`Langfuse(public_key=..., secret_key=..., base_url=...)`). Handler istemciyi public key ile buluyor (singleton, SDK kaynağından).
+  - Anahtar yoksa hiçbir şey import edilmiyor ve gönderilmiyor; testle sabitlendi.
+  - İzlerde etiketler var (retriever, model). Bir cevap eval koşusunun bütün soruları tek bir oturumda (`langfuse_session_id`) toplanıyor.
+  - Zincirin adımlarına `run_name` verildi: `query`, `translate`, `retrieve`, `format_context`, `generate`. İzlerde `RunnableSequence` gibi genel adlar yerine bunlar görünüyor.
+- **İzin geldiği doğrulandı (API ile, arayüze bakmadan):**
+  - v4'te eski `GET /api/public/traces` kaldırılmış ("events_only mode"). Gerçek zamanlı okuma `GET /api/public/v2/observations` ile; sunucunun OpenAPI dosyasından bulundu.
+  - Bir soru = 32 gözlem.
+  - İlk koşu (soğuk): toplam 8,70 sn = çeviri 3,68 + arama 0,22 (dense 0,216, BM25 0,003) + cevap 4,79.
+  - Aynı soru ikinci kez: toplam 2,03 sn = çeviri 0,54 + arama 0,04 + cevap 1,46.
+  - İlk koşuda Ollama modeli soğuk yüklüyordu. Aynı soru olduğu için Ollama'nın prompt önbelleği de etkili olabilir; iki etki ayrıştırılmadı.
+- **Kaynak ölçümü** (`docker stats`, Apple M4, Docker'a 8 GB ayrılmış):
+  - Langfuse ~3,1 GB bellek: web 1,2 GB, worker 0,9 GB, ClickHouse 0,9 GB, diğerleri < 0,1 GB.
+  - İmajlar ~4 GB disk.
+  - Hakem modeliyle (gemma3:12b, ~8 GB, Docker dışında Ollama) aynı anda çalışınca 16 GB zorlanabilir: tam eval sırasında Langfuse kapatılmalı.
+- **Güvenlik notu:** Giriş parolası ve API anahtarları yalnızca yerel `.env` dosyalarında. Arayüz yalnızca bu bilgisayardan erişilebilir.
+
+### D42. CI'da hızlı eval: chunk dosyası GitHub Release'te, Qdrant bellekte
+- **Sorun:** Hızlı eval chunk'lara (BM25 ve vektörler için) ve Qdrant'taki indekse ihtiyaç duyuyor. PDF'ler, chunk'lar ve indeks git'te değil (CLAUDE.md); CI'da Qdrant sunucusu da yok.
+- **Değerlendirilen seçenekler:**
+  - A) Sıkıştırılmış chunk dosyasını (0,4 MB) git'e koymak.
+  - **B) GitHub Release eki (asset) olarak yayımlamak. Seçildi (kullanıcı kararı):** Türetilmiş veri repoda değil, release'te duruyor; "indeks verisi git'e girmez" kuralı değişmiyor.
+  - C) CI'ın PDF'leri arXiv'den indirip Docling ile ayrıştırması. Elendi: yavaş (Docling M4'te bile 2,5 dk); arXiv'e her push'ta yük biniyor; arXiv erişilemezse CI kırılıyor.
+- **Lisans (CC BY 4.0, hukuki metin okundu):**
+  - Madde 2(a)(1): Materyalin tamamen ya da kısmen paylaşılmasına ve uyarlanmış materyal paylaşılmasına izin veriyor.
+  - Madde 3(a)(1): Paylaşan kişi yazarları, (varsa) telif bildirimini, lisans bağlantısını, materyalin bağlantısını ve **yapılan değişiklikleri** belirtmeli.
+  - Madde 3(a)(2): Bu bilgiler, onları içeren bir kaynağa bağlantı vererek de sağlanabilir.
+  - Release'e yükleme de "paylaşma" sayılıyor; şartlar B için de geçerli.
+  - `data/SOURCES.md`'de yazarlar, lisans bağlantısı ve değişiklik listesi **eksikti**. Eksiklik ham PDF'lerin indirilmesi için de vardı; bu iş sırasında görüldü ve "Attribution" bölümü eklendi.
+    - Yazarlar arXiv API'sinden alındı.
+    - Telif bildirimleri ayrıştırılmış metinde arandı. vLLM'de "© 2023 Copyright held by the owner/author(s)" (ACM, SOSP '23) var. Docling'deki ACM metni, örnek olarak gösterilen başka bir makalenin (DocLayNet) sayfasına ait.
+  - Release'e `NOTICE.md` ekleniyor: lisans bağlantısı, yazarlar, değişiklikler.
+- **Nasıl çalışıyor (`eval/ci_data.py`):**
+  - `build` (yerelde):
+    - `data/chunks.jsonl`'ü deterministik olarak sıkıştırıyor (`mtime=0`: aynı içerik, aynı `.gz`).
+    - Etiketi içeriğin SHA-256 özetinden türetiyor (`ci-data-93c3e5c62725`) ve `eval/ci_data.json`'a yazıyor (etiket, özet, 1734 chunk, 18 makale).
+    - Kullanıcının çalıştıracağı `gh release create` komutunu veriyor.
+    - Her chunk sürümünün kendi release'i var; eskiler silinmiyor.
+  - `verify` (CI): İndirilen dosyanın özeti kayıtla uyuşmazsa CI duruyor.
+  - **Bayatlık koruması:** Bir test, yereldeki `data/chunks.jsonl` ile kayıtlı özeti karşılaştırıyor. Chunking değişip yeni release yayımlanmazsa yerelde kırılıyor; CI eski chunk'larla ölçmüyor.
+- **Bellekte Qdrant:** `QDRANT_URL=:memory:` olunca `get_vectorstore` sunucuya bağlanmak yerine chunk'ları işlem başına bir kez vektöre çevirip bellekte indeksliyor.
+  - Aynı ayar `app.ask` için de çalışıyor.
+  - Sonuçlar sunucuyla birebir aynı (R@5 0,768, MRR 0,509, evidence recall@5 0,587). M4'te 1734 chunk 25 sn'de vektöre çevriliyor.
+- **CI işi (`fast-eval`):**
+  1. Chunk dosyasını indir ve özetini doğrula.
+  2. e5-small'ı önbellekten al (`actions/cache`).
+  3. Hızlı eval'i çalıştır.
+  4. Sonuç dosyasını ve logu artifact olarak sakla.
+  - Birim testlerinden ayrı bir iş: hangisinin kırıldığı ayrı görünüyor.
+  - Action sürümleri GitHub'dan kontrol edildi: `checkout@v7`, `cache@v6`, `upload-artifact@v7`.
+- **Kalite kapısı:** `--min-recall5` ve `--min-evidence5` bayrakları; eşik altında eval hata koduyla çıkıyor. Eşikler tahmin edilmedi: önce CI'ın CPU'sunda ölçülecek (Linux CPU ile Mac GPU arasında küçük sayısal farklar sıraları değiştirebilir), sonra konacak.

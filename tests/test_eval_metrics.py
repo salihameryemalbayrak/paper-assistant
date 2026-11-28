@@ -221,3 +221,16 @@ def test_evidence_metrics_recall_and_complete():
     assert result["all"]["n"] == 1
     assert result["all"]["evidence_recall@5"] == 0.5
     assert result["all"]["evidence_complete@5"] == 0.0
+
+
+def test_ci_chunk_file_matches_the_recorded_release():
+    # Chunking changed but no new release published? CI would measure stale chunks.
+    # Fix: uv run python -m eval.ci_data build, publish the release, commit eval/ci_data.json.
+    from pathlib import Path
+
+    from eval.ci_data import CHUNKS, RECORD, sha256
+
+    if not CHUNKS.exists():
+        pytest.skip("no data/chunks.jsonl (CI downloads it before the tests)")
+    recorded = json.loads(Path(RECORD).read_text(encoding="utf-8"))
+    assert sha256(CHUNKS) == recorded["sha256"], f"chunks changed since {recorded['tag']}"

@@ -1,8 +1,11 @@
-# Local services. Phase 4 only needs Qdrant; Ollama/vLLM/Langfuse profiles come in Phase 8.
+# Local services.
 #
-# Start:  docker compose -f infra/docker-compose.yml up -d qdrant
-# Stop:   docker compose -f infra/docker-compose.yml down
-# UI:     http://localhost:6333/dashboard
+# Qdrant (vector database, always needed):
+#   Start:  docker compose -f infra/docker-compose.yml up -d qdrant
+#   UI:     http://localhost:6333/dashboard
+#   Stop:   docker compose -f infra/docker-compose.yml down
+#
+# Langfuse (tracing, optional): infra/docker-compose.obs.yml, profile "obs".
 
 services:
   qdrant:

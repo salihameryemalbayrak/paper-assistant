@@ -57,9 +57,10 @@ def clean_translation(raw: str, original: str) -> str:
 def build_translator(llm: BaseChatModel) -> Runnable[str, str]:
     """question -> English question."""
     raw = PROMPT | llm | StrOutputParser()
-    return RunnableParallel(raw=raw, original=RunnablePassthrough()) | RunnableLambda(
-        lambda x: clean_translation(x["raw"], x["original"])
-    )
+    return (
+        RunnableParallel(raw=raw, original=RunnablePassthrough())
+        | RunnableLambda(lambda x: clean_translation(x["raw"], x["original"]))
+    ).with_config(run_name="translate")
 
 
 def main() -> None:

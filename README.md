@@ -67,6 +67,20 @@ Fast-eval results are saved to `docs/benchmarks/fast_eval/` with the model, hard
 
 The model server is configured only through environment variables (`LLM_BASE_URL`, `LLM_MODEL`, `LLM_API_KEY`). To switch to vLLM or another provider, edit `.env`; no code changes are needed.
 
+## Tracing (optional, Langfuse)
+
+Every question can be traced step by step (translation, each retriever branch, fusion,
+prompt, LLM calls, with timings and token counts) in a self-hosted Langfuse:
+
+```bash
+uv run python infra/make_secrets.py   # once: local secrets + LANGFUSE_* keys in .env
+docker compose -f infra/docker-compose.yml -f infra/docker-compose.obs.yml --profile obs up -d
+# UI: http://localhost:3000 (login in infra/.env)
+```
+
+Without `LANGFUSE_*` keys in `.env`, nothing is sent and the code runs unchanged.
+The stack (web, worker, Postgres, ClickHouse, Redis, MinIO) uses about 3 GB of memory.
+
 ## Development
 
 ```bash

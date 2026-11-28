@@ -42,6 +42,12 @@ class Settings(BaseSettings):
     judge_model: str = ""
     judge_base_url: str = ""
 
+    # Tracing (app/tracing.py, Langfuse). Empty keys: no tracing, nothing is sent.
+    # Local server: infra/docker-compose.obs.yml; keys written by infra/make_secrets.py.
+    langfuse_public_key: str = ""
+    langfuse_secret_key: SecretStr = SecretStr("")
+    langfuse_base_url: str = ""
+
 
 @lru_cache
 def get_settings() -> Settings:

@@ -1,0 +1,160 @@
+# Langfuse self-host (tracing), profile "obs". Optional; see docs/DECISIONS.md D41.
+#
+# Once:   uv run python infra/make_secrets.py   # writes infra/.env and the LANGFUSE_* app keys
+# Start:  docker compose -f infra/docker-compose.yml -f infra/docker-compose.obs.yml --profile obs up -d
+# UI:     http://localhost:3000  (login: LANGFUSE_INIT_USER_EMAIL / _PASSWORD in infra/.env)
+# Stop:   docker compose -f infra/docker-compose.yml -f infra/docker-compose.obs.yml --profile obs down
+#         (data survives in Docker volumes; `down -v` deletes it)
+#
+# A separate file because its secrets are required (${VAR:?...}): compose checks them for
+# every service in a file, even profile-disabled ones, so in the main file they would
+# break `docker compose up -d qdrant` on a machine without infra/.env.
+#
+# Follows the official self-host compose file (langfuse/langfuse, v4), reduced to what
+# tracing needs: no AI gateway, telemetry off, only the web UI published, on 127.0.0.1.
+
+x-langfuse-env: &langfuse-env
+  NEXTAUTH_URL: http://localhost:3000
+  DATABASE_URL: postgresql://postgres:${POSTGRES_PASSWORD:?run infra/make_secrets.py}@postgres:5432/postgres
+  SALT: ${SALT:?run infra/make_secrets.py}
+  ENCRYPTION_KEY: ${ENCRYPTION_KEY:?run infra/make_secrets.py}
+  TELEMETRY_ENABLED: "false" # no usage statistics to Langfuse: traces stay on this machine
+  CLICKHOUSE_MIGRATION_URL: clickhouse://clickhouse:9000
+  CLICKHOUSE_URL: http://clickhouse:8123
+  CLICKHOUSE_USER: clickhouse
+  CLICKHOUSE_PASSWORD: ${CLICKHOUSE_PASSWORD:?run infra/make_secrets.py}
+  CLICKHOUSE_CLUSTER_ENABLED: "false"
+  LANGFUSE_S3_EVENT_UPLOAD_BUCKET: langfuse
+  LANGFUSE_S3_EVENT_UPLOAD_REGION: auto
+  LANGFUSE_S3_EVENT_UPLOAD_ACCESS_KEY_ID: minio
+  LANGFUSE_S3_EVENT_UPLOAD_SECRET_ACCESS_KEY: ${MINIO_ROOT_PASSWORD:?run infra/make_secrets.py}
+  LANGFUSE_S3_EVENT_UPLOAD_ENDPOINT: http://minio:9000
+  LANGFUSE_S3_EVENT_UPLOAD_FORCE_PATH_STYLE: "true"
+  LANGFUSE_S3_EVENT_UPLOAD_PREFIX: events/
+  LANGFUSE_S3_MEDIA_UPLOAD_BUCKET: langfuse
+  LANGFUSE_S3_MEDIA_UPLOAD_REGION: auto
+  LANGFUSE_S3_MEDIA_UPLOAD_ACCESS_KEY_ID: minio
+  LANGFUSE_S3_MEDIA_UPLOAD_SECRET_ACCESS_KEY: ${MINIO_ROOT_PASSWORD:?run infra/make_secrets.py}
+  LANGFUSE_S3_MEDIA_UPLOAD_ENDPOINT: http://minio:9000
+  LANGFUSE_S3_MEDIA_UPLOAD_FORCE_PATH_STYLE: "true"
+  LANGFUSE_S3_MEDIA_UPLOAD_PREFIX: media/
+  REDIS_HOST: redis
+  REDIS_PORT: "6379"
+  REDIS_AUTH: ${REDIS_AUTH:?run infra/make_secrets.py}
+
+x-langfuse-depends-on: &langfuse-depends-on
+  postgres:
+    condition: service_healthy
+  minio:
+    condition: service_healthy
+  redis:
+    condition: service_healthy
+  clickhouse:
+    condition: service_healthy
+
+services:
+  langfuse-worker: # processes the ingested traces in the background
+    profiles: [obs]
+    image: docker.langfuse.com/langfuse/langfuse-worker:4.88.0 # web and worker: same release
+    restart: unless-stopped
+    depends_on: *langfuse-depends-on
+    environment: *langfuse-env
+
+  langfuse-web: # UI and the API the SDK sends traces to
+    profiles: [obs]
+    image: docker.langfuse.com/langfuse/langfuse:4.88.0
+    restart: unless-stopped
+    depends_on: *langfuse-depends-on
+    ports:
+      - "127.0.0.1:3000:3000"
+    environment:
+      <<: *langfuse-env
+      NEXTAUTH_SECRET: ${NEXTAUTH_SECRET:?run infra/make_secrets.py}
+      # First start: create the organization, project, API keys and login user, so no
+      # sign-up in the UI is needed. Values from infra/.env (make_secrets.py).
+      LANGFUSE_INIT_ORG_ID: paper-assistant
+      LANGFUSE_INIT_ORG_NAME: paper-assistant
+      LANGFUSE_INIT_PROJECT_ID: paper-assistant
+      LANGFUSE_INIT_PROJECT_NAME: paper-assistant
+      LANGFUSE_INIT_PROJECT_PUBLIC_KEY: ${LANGFUSE_PUBLIC_KEY:?run infra/make_secrets.py}
+      LANGFUSE_INIT_PROJECT_SECRET_KEY: ${LANGFUSE_SECRET_KEY:?run infra/make_secrets.py}
+      LANGFUSE_INIT_USER_EMAIL: ${LANGFUSE_INIT_USER_EMAIL:?run infra/make_secrets.py}
+      LANGFUSE_INIT_USER_NAME: admin
+      LANGFUSE_INIT_USER_PASSWORD: ${LANGFUSE_INIT_USER_PASSWORD:?run infra/make_secrets.py}
+
+  clickhouse: # traces, observations, scores (analytics database)
+    profiles: [obs]
+    image: docker.io/clickhouse/clickhouse-server:26.3.62.3
+    restart: unless-stopped
+    user: "101:101"
+    environment:
+      CLICKHOUSE_DB: default
+      CLICKHOUSE_USER: clickhouse
+      CLICKHOUSE_PASSWORD: ${CLICKHOUSE_PASSWORD:?run infra/make_secrets.py}
+    volumes:
+      - langfuse_clickhouse_data:/var/lib/clickhouse
+      - langfuse_clickhouse_logs:/var/log/clickhouse-server
+    healthcheck:
+      test: wget --no-verbose --tries=1 --spider http://localhost:8123/ping || exit 1
+      interval: 5s
+      timeout: 5s
+      retries: 10
+      start_period: 1s
+
+  minio: # S3-compatible blob storage for raw events
+    profiles: [obs]
+    image: cgr.dev/chainguard/minio # the free Chainguard image only offers "latest"
+    restart: unless-stopped
+    entrypoint: sh
+    command: -c 'mkdir -p /data/langfuse && minio server --address ":9000" --console-address ":9001" /data'
+    environment:
+      MINIO_ROOT_USER: minio
+      MINIO_ROOT_PASSWORD: ${MINIO_ROOT_PASSWORD:?run infra/make_secrets.py}
+    volumes:
+      - langfuse_minio_data:/data
+    healthcheck:
+      test: ["CMD", "mc", "ready", "local"]
+      interval: 1s
+      timeout: 5s
+      retries: 5
+      start_period: 1s
+
+  redis: # queue and cache
+    profiles: [obs]
+    image: docker.io/redis:7
+    restart: unless-stopped
+    command: >
+      --requirepass ${REDIS_AUTH:?run infra/make_secrets.py}
+      --maxmemory-policy noeviction
+    volumes:
+      - langfuse_redis_data:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 3s
+      timeout: 10s
+      retries: 10
+
+  postgres: # users, projects, API keys, prompts
+    profiles: [obs]
+    image: docker.io/postgres:17
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?run infra/make_secrets.py}
+      POSTGRES_DB: postgres
+      TZ: UTC
+      PGTZ: UTC
+    volumes:
+      - langfuse_postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres"]
+      interval: 3s
+      timeout: 3s
+      retries: 10
+
+volumes:
+  langfuse_postgres_data:
+  langfuse_clickhouse_data:
+  langfuse_clickhouse_logs:
+  langfuse_minio_data:
+  langfuse_redis_data:

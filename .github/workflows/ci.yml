@@ -17,7 +17,8 @@ jobs:
           echo "$HOME/.local/bin" >> "$GITHUB_PATH"
 
       # --locked fails if uv.lock is out of date with pyproject.toml.
-      # --no-group ingest skips Docling + PyTorch (several GB on Linux); ingest tests are skipped.
+      # --no-group ingest skips Docling (ingest tests are skipped). PyTorch is a main
+      # dependency: the CPU-only build on Linux (pyproject.toml, tool.uv.sources).
       - name: Install dependencies
         run: uv sync --locked --no-group ingest
 
@@ -28,3 +29,56 @@ jobs:
 
       - name: Test
         run: uv run --no-sync pytest -rs  # -rs: list skipped tests with reasons
+
+  # Retrieval quality on the 49-question eval set, no LLM (D42). The PDFs and the index
+  # are not in git: the chunks come from a GitHub Release asset (eval/ci_data.json says
+  # which one and its SHA-256), and Qdrant runs in memory (QDRANT_URL=:memory:).
+  fast-eval:
+    runs-on: ubuntu-latest
+    env:
+      QDRANT_URL: ":memory:"
+      # required settings; the fast eval never calls an LLM
+      LLM_BASE_URL: http://unused
+      LLM_MODEL: unused
+    steps:
+      - uses: actions/checkout@v7
+
+      - name: Install uv
+        run: |
+          curl -LsSf https://astral.sh/uv/install.sh | sh
+          echo "$HOME/.local/bin" >> "$GITHUB_PATH"
+
+      - name: Install dependencies
+        run: uv sync --locked --no-group ingest
+
+      - name: Download the chunk file (release asset) and check its SHA-256
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          tag=$(python3 -c "import json; print(json.load(open('eval/ci_data.json'))['tag'])")
+          gh release download "$tag" --pattern chunks.jsonl.gz --dir data
+          gunzip data/chunks.jsonl.gz
+          uv run --no-sync python -m eval.ci_data verify data/chunks.jsonl
+
+      # the embedding model (~470 MB) is downloaded once, not on every run
+      - name: Cache Hugging Face models
+        uses: actions/cache@v6
+        with:
+          path: ~/.cache/huggingface
+          key: hf-${{ runner.os }}-multilingual-e5-small
+
+      - name: Fast eval
+        run: |
+          set -o pipefail  # keep the eval's exit code through tee
+          uv run --no-sync python -m eval.run --fast --retriever dense_tr_bm25_en | tee fast-eval.log
+          cp "$(sed -n 's/^saved -> //p' fast-eval.log)" fast-eval-result.json
+
+      - name: Keep the result file
+        if: always()
+        uses: actions/upload-artifact@v7
+        with:
+          name: fast-eval-result
+          path: |
+            fast-eval-result.json
+            fast-eval.log
+

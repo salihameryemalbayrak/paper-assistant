@@ -41,6 +41,7 @@ from app.retrieval import (
     needs_translation,
     uses_dense,
 )
+from app.tracing import flush, get_callbacks, trace_config
 from app.translate import build_translator
 from app.vectorstore import collection_name
 from eval.dataset import QuestionType, SourceRef, load_dataset
@@ -233,12 +234,18 @@ def run_answers(model: str) -> dict:
     # Live translation here: the answer eval measures the whole system, translation included.
     translator = build_translator(llm) if needs_translation(settings.retriever, reranker) else None
     chain = build_chain(retriever, llm, translator)
-    chain.invoke("warm-up")  # loads the embedding model and the LLM
+    chain.invoke("warm-up")  # loads the embedding model and the LLM (not traced)
+
+    # One Langfuse trace per question, all in one session for this run (if keys are set).
+    callbacks = get_callbacks(settings)
+    session = f"eval-answers-{datetime.now().isoformat(timespec='minutes')}"
+    tags = ["eval", settings.retriever, settings.llm_model]
 
     rows = []
     for item in items:
+        config = trace_config(callbacks, name=f"eval {item.id}", tags=tags, session=session)
         start = time.perf_counter()
-        out = chain.invoke(item.question)
+        out = chain.invoke(item.question, config=config)
         seconds = time.perf_counter() - start
         answer = out["answer"].strip()
         answerable = item.type != QuestionType.UNANSWERABLE
@@ -265,8 +272,10 @@ def run_answers(model: str) -> dict:
             }
         )
 
+    flush(settings)
     return {
         "mode": "answers",
+        "langfuse_session": session if callbacks else None,
         "date": datetime.now().isoformat(timespec="seconds"),
         "git_commit": _git_commit(),
         "hardware": _hardware(),
@@ -292,6 +301,16 @@ def corpus_info() -> dict:
 
     chunks = load_chunks()
     return {"docs": len({c.paper for c in chunks}), "chunks": len(chunks)}
+
+
+def quality_gate(result: dict, min_recall5: float | None, min_evidence5: float | None) -> list[str]:
+    """Failed thresholds of a fast-eval result, e.g. ["recall@5 0.700 < 0.740"]."""
+    checks = [
+        ("recall@5", result["metrics"]["all"]["recall@5"], min_recall5),
+        ("evidence_recall@5", result["evidence"]["all"]["evidence_recall@5"], min_evidence5),
+    ]
+    return [f"{name} {value:.3f} < {limit}" for name, value, limit in checks
+            if limit is not None and value < limit]  # fmt: skip
 
 
 def unique_path(path: Path) -> Path:
@@ -344,6 +363,9 @@ def main() -> None:
     parser.add_argument(
         "--depth", type=int, default=None, help="results per branch before fusion (RETRIEVAL_DEPTH)"
     )
+    # Quality gate for CI (--fast): exit with an error if the run falls below these.
+    parser.add_argument("--min-recall5", type=float, help="fail if page-level recall@5 is lower")
+    parser.add_argument("--min-evidence5", type=float, help="fail if evidence recall@5 is lower")
     args = parser.parse_args()
 
     model = args.model or get_settings().embedding_model
@@ -373,6 +395,8 @@ def main() -> None:
     out = unique_path(RESULTS_DIR / f"{result['date'][:10]}_{docs}_{result['run_name']}.json")
     out.write_text(json.dumps(result, indent=2, ensure_ascii=False) + "\n", encoding="utf-8")
     print(f"saved -> {out}")
+    if failures := quality_gate(result, args.min_recall5, args.min_evidence5):
+        raise SystemExit("quality gate failed: " + "; ".join(failures))
 
 
 if __name__ == "__main__":

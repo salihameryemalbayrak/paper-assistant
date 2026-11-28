@@ -22,3 +22,13 @@ def test_unique_path_never_overwrites(tmp_path):
     assert unique_path(first).name == "2026-11-25_dense_2.json"
     (tmp_path / "2026-11-25_dense_2.json").write_text("{}")
     assert unique_path(first).name == "2026-11-25_dense_3.json"
+
+
+def test_quality_gate_reports_only_failed_thresholds():
+    from eval.run import quality_gate
+
+    result = {"metrics": {"all": {"recall@5": 0.70}},
+              "evidence": {"all": {"evidence_recall@5": 0.60}}}  # fmt: skip
+    assert quality_gate(result, None, None) == []
+    assert quality_gate(result, 0.65, 0.55) == []
+    assert quality_gate(result, 0.74, 0.55) == ["recall@5 0.700 < 0.74"]

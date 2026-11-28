@@ -37,14 +37,19 @@ Takvim yok; her aşama, "bitti" kriteri sağlanınca tamamlanmış sayılır.
 | Tam eval: answer relevancy | 0,877 |
 | Tam eval: answer accuracy | ortalama 0,433; ≥ 0,5 olan 26/41 (elle etiketlerle %90 uyum) |
 
-**Sıradaki iş, 7d Langfuse.** Önce kullanıcı kararı gerekiyor:
-- **Self-host (`obs` profili, Docker):** Ücretsiz, veri dışarı çıkmaz. Ama Postgres, ClickHouse, Redis ve MinIO'dan oluşan ağır bir yapı; 16 GB RAM ve ~23 GB boş disk zorlayabilir.
-- **Langfuse Cloud ücretsiz katmanı:** Kurulum yok, ama izler dışarı gider. Açık lisanslı derlem için sorun değil.
-- Karardan sonra: LangChain callback entegrasyonu (paket ve sürüm, kaynak kodundan doğrulanacak). `LANGFUSE_*` yoksa kod iz göndermeden çalışmalı.
+**7d Langfuse tamam (D41):** Yerelde Docker ile (v4.88.0, `infra/docker-compose.obs.yml`).
+- `app/tracing.py`: Anahtar yoksa iz yok.
+- İzlerde adım adlarıyla süreler görünüyor. İlk soğuk koşu: çeviri 3,68 sn / toplam 8,70 sn.
+- Bellek ~3,1 GB. Tam eval sırasında kapatılmalı.
 
-**Sonra:**
-- 7e: CI'da hızlı eval (Qdrant gerektiriyor; bellekteki Qdrant ya da önceden hesaplanmış vektörler).
-- Aşama 7 yoklaması.
+**7e, CI'da hızlı eval (D42):** Kod hazır.
+- Chunk dosyası GitHub Release'te (`eval/ci_data.py`), Qdrant bellekte (`QDRANT_URL=:memory:`).
+- `SOURCES.md`'ye CC BY atıfları (yazarlar, lisans bağlantısı, değişiklikler) eklendi.
+- Kalan adımlar:
+  1. Kullanıcı release'i yayımlar (`gh release create ...`), sonra commit ve push.
+  2. İlk CI koşusundaki sayılara göre eşikler (`--min-recall5`, `--min-evidence5`) workflow'a eklenir.
+
+**Sonra:** Aşama 7 yoklaması, ardından Aşama 8 (FastAPI + Streamlit + Docker Compose).
 
 **Oturum başında:**
 1. Docker Desktop'ı aç → `docker compose -f infra/docker-compose.yml up -d qdrant`

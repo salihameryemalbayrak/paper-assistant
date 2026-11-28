@@ -107,18 +107,20 @@ def build_chain(
     retriever: Runnable, llm: BaseChatModel, translator: Runnable[str, str] | None = None
 ) -> Runnable:
     """question -> {"question", "query", "docs", "answer"}."""
+    # run_name: readable step names in traces (Langfuse) instead of RunnableSequence etc.
     to_query = (
         RunnableParallel(tr=RunnablePassthrough(), en=translator)
         if translator
         else RunnableLambda(lambda question: {"tr": question})
-    )
+    ).with_config(run_name="query")
     to_prompt_inputs = RunnableLambda(
         lambda x: {"context": format_docs(x["docs"]), "question": x["question"]}
-    )
-    answer = to_prompt_inputs | PROMPT | llm | StrOutputParser()
+    ).with_config(run_name="format_context")
+    answer = (to_prompt_inputs | PROMPT | llm | StrOutputParser()).with_config(run_name="generate")
+    retrieve = (itemgetter("query") | retriever).with_config(run_name="retrieve")
     return (
         RunnableParallel(question=RunnablePassthrough(), query=to_query)
-        .assign(docs=itemgetter("query") | retriever)
+        .assign(docs=retrieve)
         .assign(answer=answer)
     )
 
@@ -127,6 +129,7 @@ def main() -> None:
     from app.config import get_settings
     from app.llm import get_chat_model
     from app.retrieval import build_retriever, needs_translation
+    from app.tracing import flush, get_callbacks, trace_config
     from app.translate import build_translator
 
     question = " ".join(sys.argv[1:]).strip()
@@ -144,9 +147,12 @@ def main() -> None:
     )
     chain = build_chain(retriever, llm, translator)
 
+    callbacks = get_callbacks(settings)
+    config = trace_config(callbacks, name="ask", tags=[settings.retriever, settings.llm_model])
     start = time.perf_counter()
-    result = chain.invoke(question)
+    result = chain.invoke(question, config=config)
     elapsed = time.perf_counter() - start
+    flush(settings)
 
     if "en" in result["query"]:
         print(f"[EN query: {result['query']['en']}]\n")
@@ -158,7 +164,8 @@ def main() -> None:
         print(f"\nUYARI: bağlamda olmayan kaynak etiketi: {unknown}")
     rerank = f" + rerank {settings.reranker}" if settings.reranker else ""
     models = f"{settings.llm_model} | {settings.retriever}{rerank} | {settings.embedding_model}"
-    print(f"\n[{models} | {elapsed:.1f} sn]")
+    traced = " | trace: Langfuse" if callbacks else ""
+    print(f"\n[{models} | {elapsed:.1f} sn{traced}]")
 
 
 if __name__ == "__main__":

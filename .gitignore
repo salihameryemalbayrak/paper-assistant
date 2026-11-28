@@ -26,3 +26,6 @@ eval/runs/
 .DS_Store
 .vscode/
 .idea/
+
+# Build outputs (e.g. the CI data release asset, eval/ci_data.py)
+dist/
