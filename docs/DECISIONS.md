@@ -803,4 +803,9 @@ Her karar için:
   4. Sonuç dosyasını ve logu artifact olarak sakla.
   - Birim testlerinden ayrı bir iş: hangisinin kırıldığı ayrı görünüyor.
   - Action sürümleri GitHub'dan kontrol edildi: `checkout@v7`, `cache@v6`, `upload-artifact@v7`.
-- **Kalite kapısı:** `--min-recall5` ve `--min-evidence5` bayrakları; eşik altında eval hata koduyla çıkıyor. Eşikler tahmin edilmedi: önce CI'ın CPU'sunda ölçülecek (Linux CPU ile Mac GPU arasında küçük sayısal farklar sıraları değiştirebilir), sonra konacak.
+- **Kalite kapısı:** `--min-recall5` ve `--min-evidence5` bayrakları; eşik altında eval hata koduyla çıkıyor. Eşikler önce CI'da ölçülüp sonra kondu.
+- **İlk CI ölçümü** (GitHub Actions, Linux x86_64, CPU):
+  - Recall@5 0,768, MRR 0,509, evidence recall@5 0,587; **41 sorunun hiçbirinde sıralama Mac'ten (M4, MPS) farklı değil.**
+  - Vektöre çevirme 217 sn (M4'te 25 sn); iş toplam ~4 dk.
+  - Eşikler: Recall@5 ≥ 0,74, evidence recall@5 ≥ 0,55 (yaklaşık bir soru aşağısı). Tam mevcut değer seçilmedi: bir sorunun bir sıra kayması CI'ı kırar ve başka yerde kazanç getiren bilinçli değişiklikleri engellerdi. Eşik ancak bilerek, gerektiren değişiklikle birlikte düşürülür.
+- **İyileştirme fırsatı (yapılmadı):** Vektörler chunk özeti + model adıyla önbelleğe alınırsa her koşuda 3,5 dk kazanılır (ör. Qdrant'ın diske yazan yerel modu + `actions/cache`). Şimdilik erken optimizasyon.

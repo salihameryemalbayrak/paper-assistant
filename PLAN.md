@@ -42,14 +42,13 @@ Takvim yok; her aşama, "bitti" kriteri sağlanınca tamamlanmış sayılır.
 - İzlerde adım adlarıyla süreler görünüyor. İlk soğuk koşu: çeviri 3,68 sn / toplam 8,70 sn.
 - Bellek ~3,1 GB. Tam eval sırasında kapatılmalı.
 
-**7e, CI'da hızlı eval (D42):** Kod hazır.
-- Chunk dosyası GitHub Release'te (`eval/ci_data.py`), Qdrant bellekte (`QDRANT_URL=:memory:`).
-- `SOURCES.md`'ye CC BY atıfları (yazarlar, lisans bağlantısı, değişiklikler) eklendi.
-- Kalan adımlar:
-  1. Kullanıcı release'i yayımlar (`gh release create ...`), sonra commit ve push.
-  2. İlk CI koşusundaki sayılara göre eşikler (`--min-recall5`, `--min-evidence5`) workflow'a eklenir.
+**7e tamam: CI'da hızlı eval (D42).**
+- Chunk dosyası GitHub Release'te, Qdrant bellekte.
+- CI'da sonuçlar Mac ile birebir aynı (R@5 0,768, evidence recall@5 0,587).
+- Kalite kapısı: R@5 ≥ 0,74, evidence ≥ 0,55. İş ~4 dk sürüyor (vektöre çevirme 217 sn).
+- **Aşama 7 tamam.**
 
-**Sonra:** Aşama 7 yoklaması, ardından Aşama 8 (FastAPI + Streamlit + Docker Compose).
+**Sıradaki:** Aşama 7 yoklaması, ardından Aşama 8 (FastAPI + Streamlit + Docker Compose).
 
 **Oturum başında:**
 1. Docker Desktop'ı aç → `docker compose -f infra/docker-compose.yml up -d qdrant`
@@ -426,7 +425,7 @@ Türkçe soru ──► TR→EN çeviri ──► BM25(EN) + Dense(TR, EN) ─�
 - [x] Aşama 4 — Dense + basit RAG (baseline: e5-small, qwen3:4b-instruct)
 - [x] Aşama 5 — Hibrit arama + sorgu çevirisi (varsayılan: `dense_tr_bm25_en`, D32)
 - [x] Aşama 6 — Reranker (varsayılan kapalı: cevap kazancı ölçülmedi, D33)
-- [ ] Aşama 7 — Tam eval + Langfuse
+- [x] Aşama 7 — Tam eval + Langfuse (49 soru, RAGAS + yerel hakem, Langfuse self-host, CI'da hızlı eval)
 - [ ] Aşama 8 — API + arayüz + Docker Compose
 - [ ] Aşama 9 — Model karşılaştırma matrisi
 - [ ] G1 — LangGraph agentic akış

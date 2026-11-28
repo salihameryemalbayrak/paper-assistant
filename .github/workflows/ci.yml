@@ -37,6 +37,7 @@ jobs:
     runs-on: ubuntu-latest
     env:
       QDRANT_URL: ":memory:"
+      PYTHONUNBUFFERED: "1" # print progress at once, not when the pipe buffer fills
       # required settings; the fast eval never calls an LLM
       LLM_BASE_URL: http://unused
       LLM_MODEL: unused
@@ -70,7 +71,11 @@ jobs:
       - name: Fast eval
         run: |
           set -o pipefail  # keep the eval's exit code through tee
-          uv run --no-sync python -m eval.run --fast --retriever dense_tr_bm25_en | tee fast-eval.log
+          # Quality gate: about one question below the measured baseline (2026-11-28:
+          # recall@5 0.768, evidence recall@5 0.587, identical on CI CPU and an M4, D42).
+          # Lower these only deliberately, together with the change that needs it.
+          uv run --no-sync python -m eval.run --fast --retriever dense_tr_bm25_en \
+            --min-recall5 0.74 --min-evidence5 0.55 | tee fast-eval.log
           cp "$(sed -n 's/^saved -> //p' fast-eval.log)" fast-eval-result.json
 
       - name: Keep the result file
