@@ -167,6 +167,7 @@ Repo iskeleti oluştukça doldurulacak:
 | Hızlı eval (retrieval) | `uv run python -m eval.run --fast` (`--retriever hybrid_en`, `--reranker minilm_en`, `--depth 20`, `--model ...`; varyantlar `app/retrieval.py`, reranker'lar `app/rerank.py`) |
 | Eval sorularının kanıt kontrolü | `uv run python -m eval.check_evidence` (ifade biçimi: `uv run python -m eval.check_phrasing`) |
 | Cevap eval (LLM) | `uv run python -m eval.run --answers` (retriever `.env`'deki `RETRIEVER`; tek seferlik: `RETRIEVER=dense uv run ...`) |
+| Dayanıklılık testi (küçük harfli sorular, LLM) | `uv run python -m eval.robustness` → `docs/benchmarks/robustness/` |
 | Eval sorularını çevirme | `uv run python -m eval.translations` → `eval/translations.jsonl` (elle kontrol edilir) |
 | Tam eval (RAGAS, hakem LLM) | `uv run --group eval python -m eval.full docs/benchmarks/answers/<dosya>.json` (`--limit 3` ile deneme; hakem: `JUDGE_MODEL`) |
 | Langfuse (iz kaydı) | Bir kez: `uv run python infra/make_secrets.py` → `docker compose -f infra/docker-compose.yml -f infra/docker-compose.obs.yml --profile obs up -d` (arayüz http://localhost:3000; durdurma: aynı komut `... --profile obs down`) |

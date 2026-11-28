@@ -93,3 +93,13 @@ def test_answer_kind_separates_refusal_partial_and_answer():
 def test_label_normalization_only_touches_page_ranges():
     assert extract_citations("x [bge_m3, s.2-3, §2]") == ["[bge_m3, s.2–3, §2]"]
     assert extract_citations("x [bge_m-3, s.4, §3.2]") == ["[bge_m-3, s.4, §3.2]"]
+
+
+def test_chain_truecases_the_question_before_search_and_prompt():
+    seen = []
+    retriever = RunnableLambda(lambda query: seen.append(query) or [doc()])
+    llm = FakeListChatModel(responses=["Cevap [ragas, s.3, §3]."])
+    chain = build_chain(retriever, llm, vocab={"qlora": "QLoRA"})
+    result = chain.invoke("qlora nedir?")
+    assert seen == [{"tr": "QLoRA nedir?"}]
+    assert result["question"] == "QLoRA nedir?"

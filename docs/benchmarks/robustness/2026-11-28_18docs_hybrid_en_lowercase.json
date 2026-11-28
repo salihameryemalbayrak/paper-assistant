@@ -1,0 +1,202 @@
+{
+  "mode": "robustness",
+  "date": "2026-11-28T13:39:20",
+  "git_commit": "fd9af08-dirty",
+  "hardware": "Apple M4, macOS 26.6.2",
+  "corpus": {
+    "docs": 18,
+    "chunks": 1734
+  },
+  "retriever": "hybrid_en",
+  "retrieval_depth": 20,
+  "translation_llm": "qwen3:4b-instruct",
+  "questions": 41,
+  "vocabulary_size": 791,
+  "seconds": 162,
+  "results": {
+    "original": {
+      "recall@5": 0.7805,
+      "evidence_recall@5": 0.7067
+    },
+    "original+truecase": {
+      "recall@5": 0.7805,
+      "evidence_recall@5": 0.7067
+    },
+    "lowercase": {
+      "recall@5": 0.6951,
+      "evidence_recall@5": 0.4933
+    },
+    "lowercase+truecase": {
+      "recall@5": 0.8049,
+      "evidence_recall@5": 0.7067
+    }
+  },
+  "per_question_evidence_recall@5": {
+    "q01": {},
+    "q02": {},
+    "q03": {},
+    "q04": {},
+    "q05": {},
+    "q06": {},
+    "q07": {},
+    "q08": {},
+    "q09": {},
+    "q10": {},
+    "q11": {},
+    "q12": {},
+    "q13": {},
+    "q14": {},
+    "q15": {},
+    "q16": {},
+    "q21": {
+      "original": 1,
+      "original+truecase": 1,
+      "lowercase": 1,
+      "lowercase+truecase": 1
+    },
+    "q22": {
+      "original": 1,
+      "original+truecase": 1,
+      "lowercase": 1,
+      "lowercase+truecase": 1
+    },
+    "q23": {
+      "original": 1,
+      "original+truecase": 1,
+      "lowercase": 0,
+      "lowercase+truecase": 0
+    },
+    "q24": {
+      "original": 1,
+      "original+truecase": 1,
+      "lowercase": 0,
+      "lowercase+truecase": 1
+    },
+    "q25": {
+      "original": 0.5,
+      "original+truecase": 0.5,
+      "lowercase": 0.5,
+      "lowercase+truecase": 0.5
+    },
+    "q26": {
+      "original": 1,
+      "original+truecase": 1,
+      "lowercase": 0,
+      "lowercase+truecase": 1
+    },
+    "q27": {
+      "original": 1,
+      "original+truecase": 1,
+      "lowercase": 0,
+      "lowercase+truecase": 1
+    },
+    "q28": {
+      "original": 0.667,
+      "original+truecase": 0.667,
+      "lowercase": 0.667,
+      "lowercase+truecase": 0.667
+    },
+    "q29": {
+      "original": 0,
+      "original+truecase": 0,
+      "lowercase": 0,
+      "lowercase+truecase": 0
+    },
+    "q31": {
+      "original": 0,
+      "original+truecase": 0,
+      "lowercase": 0,
+      "lowercase+truecase": 1
+    },
+    "q32": {
+      "original": 1,
+      "original+truecase": 1,
+      "lowercase": 1,
+      "lowercase+truecase": 1
+    },
+    "q33": {
+      "original": 1,
+      "original+truecase": 1,
+      "lowercase": 1,
+      "lowercase+truecase": 1
+    },
+    "q34": {
+      "original": 1,
+      "original+truecase": 1,
+      "lowercase": 0.667,
+      "lowercase+truecase": 1
+    },
+    "q35": {
+      "original": 0,
+      "original+truecase": 0,
+      "lowercase": 0,
+      "lowercase+truecase": 0
+    },
+    "q36": {
+      "original": 0,
+      "original+truecase": 0,
+      "lowercase": 1,
+      "lowercase+truecase": 0
+    },
+    "q37": {
+      "original": 1,
+      "original+truecase": 1,
+      "lowercase": 1,
+      "lowercase+truecase": 1
+    },
+    "q38": {
+      "original": 0.5,
+      "original+truecase": 0.5,
+      "lowercase": 0.5,
+      "lowercase+truecase": 0.5
+    },
+    "q39": {
+      "original": 0.667,
+      "original+truecase": 0.667,
+      "lowercase": 0.667,
+      "lowercase+truecase": 0.667
+    },
+    "q41": {
+      "original": 1,
+      "original+truecase": 1,
+      "lowercase": 1,
+      "lowercase+truecase": 1
+    },
+    "q42": {
+      "original": 1,
+      "original+truecase": 1,
+      "lowercase": 0,
+      "lowercase+truecase": 1
+    },
+    "q43": {
+      "original": 0,
+      "original+truecase": 0,
+      "lowercase": 0,
+      "lowercase+truecase": 0
+    },
+    "q44": {
+      "original": 1,
+      "original+truecase": 1,
+      "lowercase": 0,
+      "lowercase+truecase": 1
+    },
+    "q45": {
+      "original": 1,
+      "original+truecase": 1,
+      "lowercase": 1,
+      "lowercase+truecase": 1
+    },
+    "q46": {
+      "original": 0.667,
+      "original+truecase": 0.667,
+      "lowercase": 0.667,
+      "lowercase+truecase": 0.667
+    },
+    "q47": {
+      "original": 0.667,
+      "original+truecase": 0.667,
+      "lowercase": 0.667,
+      "lowercase+truecase": 0.667
+    }
+  }
+}

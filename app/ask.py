@@ -28,6 +28,8 @@ from langchain_core.output_parsers import StrOutputParser
 from langchain_core.prompts import ChatPromptTemplate
 from langchain_core.runnables import Runnable, RunnableLambda, RunnableParallel, RunnablePassthrough
 
+from app.truecase import truecase
+
 NOT_FOUND = "Dokümanda bulamadım."
 CONTEXT_K = 5  # chunks given to the LLM
 
@@ -104,9 +106,16 @@ def answer_kind(answer: str) -> str:
 
 
 def build_chain(
-    retriever: Runnable, llm: BaseChatModel, translator: Runnable[str, str] | None = None
+    retriever: Runnable,
+    llm: BaseChatModel,
+    translator: Runnable[str, str] | None = None,
+    vocab: dict[str, str] | None = None,
 ) -> Runnable:
-    """question -> {"question", "query", "docs", "answer"}."""
+    """question -> {"question", "query", "docs", "answer"}.
+
+    vocab (app.truecase): names typed in lowercase get their usual spelling before
+    translation, search and the prompt ("qlora" -> "QLoRA", D47).
+    """
     # run_name: readable step names in traces (Langfuse) instead of RunnableSequence etc.
     to_query = (
         RunnableParallel(tr=RunnablePassthrough(), en=translator)
@@ -118,11 +127,16 @@ def build_chain(
     ).with_config(run_name="format_context")
     answer = (to_prompt_inputs | PROMPT | llm | StrOutputParser()).with_config(run_name="generate")
     retrieve = (itemgetter("query") | retriever).with_config(run_name="retrieve")
-    return (
+    chain = (
         RunnableParallel(question=RunnablePassthrough(), query=to_query)
         .assign(docs=retrieve)
         .assign(answer=answer)
     )
+    if vocab:
+        chain = (
+            RunnableLambda(lambda q: truecase(q, vocab)).with_config(run_name="truecase") | chain
+        )
+    return chain
 
 
 def main() -> None:
@@ -145,7 +159,9 @@ def main() -> None:
     translator = (
         build_translator(llm) if needs_translation(settings.retriever, settings.reranker) else None
     )
-    chain = build_chain(retriever, llm, translator)
+    from app.truecase import load_vocabulary
+
+    chain = build_chain(retriever, llm, translator, load_vocabulary())
 
     callbacks = get_callbacks(settings)
     config = trace_config(callbacks, name="ask", tags=[settings.retriever, settings.llm_model])

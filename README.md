@@ -24,8 +24,9 @@ flowchart LR
         chunks --> bm25[("BM25<br/>in memory")]
     end
     subgraph query["Question (online)"]
-        q["Turkish question"] --> tr["LLM: translate<br/>TR → EN"]
-        q --> d1["dense search<br/>(TR)"]
+        q["Turkish question"] --> tc["truecase names<br/>qlora → QLoRA"]
+        tc --> tr["LLM: translate<br/>TR → EN"]
+        tc --> d1["dense search<br/>(TR)"]
         tr --> d2["dense search<br/>(EN)"]
         tr --> b["BM25<br/>(EN)"]
         d1 & d2 & b --> rrf["RRF fusion<br/>20 per branch → top 5"]
@@ -93,6 +94,10 @@ The judge agreed with hand labels on 37 of 41 answers ([D40](docs/DECISIONS.md))
   faithful and still wrong; a reference-based score catches it ([D39](docs/DECISIONS.md), [D40](docs/DECISIONS.md)).
 - **Decisions were re-measured as the eval set grew:** a retriever rejected on 20 questions
   and 5 papers became the default on 49 questions and 18 papers ([D46](docs/DECISIONS.md)).
+- **Robust to how names are typed:** with all questions in lowercase ("qlora", "ares"), evidence
+  recall@5 fell from 0.707 to 0.493, mostly because the translator no longer recognized the
+  names. Restoring their usual spelling from a corpus-derived vocabulary (truecasing) brings it
+  back to 0.707 ([D47](docs/DECISIONS.md); `uv run python -m eval.robustness`).
 - **Main remaining weakness:** reading tables with a 4B model, even when the right rows are
   in the context ([D38](docs/DECISIONS.md)).
 

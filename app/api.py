@@ -89,6 +89,7 @@ def build_engine() -> Engine:
     from app.retrieval import build_retriever, needs_translation
     from app.tracing import get_callbacks
     from app.translate import build_translator
+    from app.truecase import load_vocabulary
     from app.vectorstore import get_vectorstore
     from ingest.download import SOURCES_FILE, parse_sources
 
@@ -105,7 +106,7 @@ def build_engine() -> Engine:
         return {"chunks": store.client.get_collection(store.collection_name).points_count}
 
     return Engine(
-        chain=build_chain(retriever, llm, translator),
+        chain=build_chain(retriever, llm, translator, load_vocabulary()),
         llm=s.llm_model,
         retriever=s.retriever + (f" + rerank {s.reranker}" if s.reranker else ""),
         health=health,

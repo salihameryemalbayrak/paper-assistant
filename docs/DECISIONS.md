@@ -907,3 +907,49 @@ Her karar için:
   - CI kalite kapısı `hybrid_en` için: R@5 ≥ 0,75, evidence recall@5 ≥ 0,67 (yaklaşık bir soru aşağısı).
   - **`eval.run --fast` artık varsayılan olarak `.env`'deki retriever'ı ölçüyor.** Önce koda yazılı `dense`'i ölçüyordu; elle çalıştıran biri sistemin kullanmadığı bir retriever'ın sonucunu görebilirdi. Bu, kapı denenirken fark edildi.
 - **Sınırlar:** 41 soru, tek koşu, tek hakem. +3 soru anlamlı ama kesin değil. Ek dense kol aramaya ~9 ms ekliyor; LLM'in süresi yanında önemsiz.
+
+### D47. Büyük/küçük harf dayanıklılığı: derlemden çıkarılan adlarla truecasing
+- **Kullanıcı gözlemi:** Aynı soru farklı harf düzeniyle sorulunca cevap değişebiliyordu.
+- **Ölçüm** (41 cevaplanabilir soru tamamen küçük harfle, Türkçe kurallarla: I → ı, İ → i; varsayılan `hybrid_en`):
+  - Evidence recall@5 0,707 → **0,493**; Recall@5 0,780 → 0,695.
+  - Getirilen 5 chunk'tan ortalama 3,9'u aynı kalıyor; yalnızca 12/41 soruda küme birebir aynı.
+- **Hangi bileşen?** Etki iki kaynağa ayrıldı (evidence recall@5):
+
+| Durum | Evidence recall@5 |
+|---|---|
+| Orijinal | 0,707 |
+| Yalnızca Türkçe soru küçük harf (dense e5) | 0,613 |
+| Yalnızca çeviri küçük harfli sorudan | **0,507** |
+| İkisi birlikte | 0,493 |
+
+  - Düşüşün çoğu **çeviriden**: model küçük harfli adları tanımıyor. "ares" çeviride kayboluyor ("what does it measure?"); "react" "React" (JavaScript kütüphanesi) oluyor.
+  - Kontrol: Çeviri belirlenimci. Orijinal soruların bugünkü çevirisi kayıtlılarla 41/41, aynı sorunun iki çevirisi 10/10 aynı. Yani değişen 31/41 çevirinin nedeni gerçekten harf durumu.
+- **Çözüm: truecasing** (`app/truecase.py`). Soru zincire girer girmez, tamamen küçük harfle yazılmış bilinen adlar standart yazımlarına çevriliyor.
+  - Sözlük elle yazılmadı, derlemden çıkarıldı (791 ad):
+    - "Ad gibi" kelimeler: ilk harften sonra büyük harf, ya da rakamla birlikte büyük harf içerenler (QLoRA, vLLM, ARES, ReAct, ColBERTv2, GPT-4, MMLU).
+    - `SOURCES.md`'deki makale adları (Ragas, Mistral, Contriever).
+  - İki bulgu kuralı değiştirdi:
+    1. Adlar URL'lerde küçük harfle geçiyordu (`github.com/artidoro/qlora`). URL ve yol parçaları sayımdan çıkarıldı. "Hiç küçük harfle geçmiyor" şartı, "en fazla %10 küçük harfle geçiyor" oldu ("vllm" bir kez, "vLLM" onlarca kez).
+    2. Derlemde en sık büyük harfli yazım başlıklardan geliyordu ("3 QLORA Finetuning"). Tamamı büyük harfli olmayan yazım tercih ediliyor: QLoRA, Ragas, Self-RAG.
+  - **Güvenlik önlemleri:**
+    - Yalnızca **tamamen küçük harfle yazılmış** kelimeler değişiyor; kullanıcının büyük harfle yazdığı ad olduğu gibi kalıyor.
+    - Yalnızca baş harfi büyük kelimeler (yazar adları) otomatik listeye girmiyor; "Kim" girseydi Türkçe "kim" soru kelimesi bozulurdu.
+    - Türkçe ı/i katlanıyor ("ıssup" → ISSUP).
+    - Eval setindeki küçük harfli sorularda değişen 39 kelimenin hepsi ad; Türkçe kelime yok.
+- **Sonuç** (`uv run python -m eval.robustness`, Apple M4, qwen3:4b-instruct çeviri):
+
+| | Recall@5 | Evidence recall@5 |
+|---|---|---|
+| Orijinal | 0,780 | 0,707 |
+| Orijinal + truecasing | 0,780 | 0,707 |
+| Küçük harf | 0,695 | 0,493 |
+| **Küçük harf + truecasing** | **0,805** | **0,707** |
+
+  - Küçük harf kaybı tamamen kapandı; orijinal sorular etkilenmedi (truecasing onlarda hiçbir şeyi değiştirmiyor).
+  - Soru bazında yalnızca q23 (biraz kötü) ve q31 (iyi) farklı; çeviri birkaç kelime farklı.
+- **Gerçek sistemde:** "ares, bir rag sistemini..." ile "ARES, bir RAG sistemini..." artık aynı çeviri, kaynak ve cevabı veriyor.
+- **Uygulama:** Zincirin ilk adımı (`truecase`, izlerde görünüyor); API, CLI, cevap eval'i ve hızlı eval aynı adımı kullanıyor. Sözlük açılışta bir kez kuruluyor. 5 test.
+- **Sınırlar:**
+  - Derlemde ad olarak geçmeyen bir adı (yeni bir model) düzeltemez.
+  - "llama" hayvan olarak da geçtiği için listede yok; "llama 2" yazılırsa düzeltilmez.
+  - Dayanıklılık testi LLM gerektirdiği için CI'da değil, yerelde çalışıyor.

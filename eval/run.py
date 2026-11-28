@@ -43,6 +43,7 @@ from app.retrieval import (
 )
 from app.tracing import flush, get_callbacks, trace_config
 from app.translate import build_translator
+from app.truecase import load_vocabulary, truecase
 from app.vectorstore import collection_name
 from eval.dataset import QuestionType, SourceRef, load_dataset
 from eval.retrieval_metrics import Hit, evaluate, evidence_found, evidence_metrics, reciprocal_rank
@@ -118,8 +119,11 @@ def run_fast(
         english = {item.question: stored[item.id].en for item in items}
         translation_model = stored[items[0].id].model
 
+    vocab = load_vocabulary()  # same truecasing as the answer chain (a no-op on the eval set)
+
     def to_query(question: str) -> Query:
-        return {"tr": question, "en": english[question]} if english else {"tr": question}
+        tr = truecase(question, vocab)
+        return {"tr": tr, "en": english[question]} if english else {"tr": tr}
 
     retriever.invoke({"tr": "warm-up", "en": "warm-up"})  # loads the model; not timed
     cache: dict[str, list[Hit]] = {}
@@ -233,7 +237,7 @@ def run_answers(model: str) -> dict:
     multi = len(BRANCHES[settings.retriever]) > 1
     # Live translation here: the answer eval measures the whole system, translation included.
     translator = build_translator(llm) if needs_translation(settings.retriever, reranker) else None
-    chain = build_chain(retriever, llm, translator)
+    chain = build_chain(retriever, llm, translator, load_vocabulary())
     chain.invoke("warm-up")  # loads the embedding model and the LLM (not traced)
 
     # One Langfuse trace per question, all in one session for this run (if keys are set).

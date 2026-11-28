@@ -79,6 +79,7 @@ Takvim yok; her aşama, "bitti" kriteri sağlanınca tamamlanmış sayılır.
 - **Çeviri modeli bazen uyduruyor:** q42'de soruyu çevirmek yerine yanlış bir cevap yazdı (D35). Guardrail adayı.
 - **RAGAS hakemi de yanılıyor:** q22'de bağlamda yazan "W = 4096" iddiasını reddetti (D39).
 - **RAGAS bağımlılığı `openai`'yi 3.3'e düşürdü:** instructor `jiter<0.15` istiyor; uygulama çalışıyor ama ileride çakışabilir (D39).
+- ~~Büyük/küçük harfe duyarlılık~~ → Çözüldü (D47): truecasing, küçük harfli sorularda evidence recall@5 0,493 → 0,707. Test: `uv run python -m eval.robustness`.
 - **Qwen bazen Çince token sızdırıyor:** q01 cevabında "检索" (D38).
 - **Tablo cevapları zayıf:** Arama tabloları buluyor ama cevaplar 2/10 doğru. Bölünmüş tablolarda gereken satır bağlamda olmuyor; model satır okumada hata yapıyor (D36).
 - **Şekil ve karşılaştırma soruları zayıf:** Şekil sorularında R@1 = 0 (8 soru); karşılaştırmalarda R@5 0,438 (D35).
