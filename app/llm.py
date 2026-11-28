@@ -15,11 +15,12 @@ from langchain_openai import ChatOpenAI
 from app.config import Settings, get_settings
 
 
-def get_chat_model(settings: Settings | None = None) -> ChatOpenAI:
+def get_chat_model(settings: Settings | None = None, model: str | None = None) -> ChatOpenAI:
+    """The configured LLM; `model` overrides LLM_MODEL on the same server (e.g. translation)."""
     s = settings or get_settings()
     return ChatOpenAI(
         base_url=s.llm_base_url,
-        model=s.llm_model,
+        model=model or s.llm_model,
         api_key=s.llm_api_key,
         temperature=s.llm_temperature,
         timeout=s.llm_timeout_s,

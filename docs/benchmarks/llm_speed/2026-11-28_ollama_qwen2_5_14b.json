@@ -1,0 +1,266 @@
+{
+  "mode": "llm_speed",
+  "server": "OpenAI-compatible @ http://localhost:11434/v1",
+  "model": "qwen2.5:14b",
+  "hardware": "Apple M4, macOS 26.6.2",
+  "date": "2026-11-28T14:49:22",
+  "requests": "one at a time (batch 1), as in the app",
+  "max_tokens": 512,
+  "prompts": 49,
+  "latency_s": {
+    "p50": 32.79,
+    "p95": 49.43
+  },
+  "output_tokens_per_s": 2.4,
+  "swap_pages_during_run": {
+    "swapins": 477425,
+    "swapouts": 1067632
+  },
+  "per_prompt": [
+    {
+      "id": "q01",
+      "seconds": 7.016,
+      "output_tokens": 54
+    },
+    {
+      "id": "q02",
+      "seconds": 15.053,
+      "output_tokens": 25
+    },
+    {
+      "id": "q03",
+      "seconds": 35.977,
+      "output_tokens": 89
+    },
+    {
+      "id": "q04",
+      "seconds": 30.299,
+      "output_tokens": 65
+    },
+    {
+      "id": "q05",
+      "seconds": 28.76,
+      "output_tokens": 42
+    },
+    {
+      "id": "q06",
+      "seconds": 34.512,
+      "output_tokens": 77
+    },
+    {
+      "id": "q07",
+      "seconds": 25.927,
+      "output_tokens": 61
+    },
+    {
+      "id": "q08",
+      "seconds": 45.627,
+      "output_tokens": 128
+    },
+    {
+      "id": "q09",
+      "seconds": 34.854,
+      "output_tokens": 10
+    },
+    {
+      "id": "q10",
+      "seconds": 38.334,
+      "output_tokens": 54
+    },
+    {
+      "id": "q11",
+      "seconds": 37.077,
+      "output_tokens": 136
+    },
+    {
+      "id": "q12",
+      "seconds": 14.672,
+      "output_tokens": 10
+    },
+    {
+      "id": "q13",
+      "seconds": 29.696,
+      "output_tokens": 10
+    },
+    {
+      "id": "q14",
+      "seconds": 34.836,
+      "output_tokens": 102
+    },
+    {
+      "id": "q15",
+      "seconds": 47.674,
+      "output_tokens": 190
+    },
+    {
+      "id": "q16",
+      "seconds": 42.399,
+      "output_tokens": 163
+    },
+    {
+      "id": "q17",
+      "seconds": 28.115,
+      "output_tokens": 10
+    },
+    {
+      "id": "q18",
+      "seconds": 18.781,
+      "output_tokens": 10
+    },
+    {
+      "id": "q19",
+      "seconds": 20.851,
+      "output_tokens": 10
+    },
+    {
+      "id": "q20",
+      "seconds": 26.191,
+      "output_tokens": 10
+    },
+    {
+      "id": "q21",
+      "seconds": 38.688,
+      "output_tokens": 74
+    },
+    {
+      "id": "q22",
+      "seconds": 35.696,
+      "output_tokens": 71
+    },
+    {
+      "id": "q23",
+      "seconds": 23.245,
+      "output_tokens": 10
+    },
+    {
+      "id": "q24",
+      "seconds": 29.635,
+      "output_tokens": 49
+    },
+    {
+      "id": "q25",
+      "seconds": 41.054,
+      "output_tokens": 105
+    },
+    {
+      "id": "q26",
+      "seconds": 30.25,
+      "output_tokens": 92
+    },
+    {
+      "id": "q27",
+      "seconds": 50.471,
+      "output_tokens": 141
+    },
+    {
+      "id": "q28",
+      "seconds": 49.433,
+      "output_tokens": 185
+    },
+    {
+      "id": "q29",
+      "seconds": 44.069,
+      "output_tokens": 177
+    },
+    {
+      "id": "q30",
+      "seconds": 21.98,
+      "output_tokens": 10
+    },
+    {
+      "id": "q31",
+      "seconds": 30.097,
+      "output_tokens": 46
+    },
+    {
+      "id": "q32",
+      "seconds": 45.898,
+      "output_tokens": 160
+    },
+    {
+      "id": "q33",
+      "seconds": 39.34,
+      "output_tokens": 54
+    },
+    {
+      "id": "q34",
+      "seconds": 39.205,
+      "output_tokens": 109
+    },
+    {
+      "id": "q35",
+      "seconds": 41.725,
+      "output_tokens": 146
+    },
+    {
+      "id": "q36",
+      "seconds": 43.813,
+      "output_tokens": 131
+    },
+    {
+      "id": "q37",
+      "seconds": 41.765,
+      "output_tokens": 151
+    },
+    {
+      "id": "q38",
+      "seconds": 31.485,
+      "output_tokens": 93
+    },
+    {
+      "id": "q39",
+      "seconds": 33.707,
+      "output_tokens": 99
+    },
+    {
+      "id": "q40",
+      "seconds": 20.151,
+      "output_tokens": 10
+    },
+    {
+      "id": "q41",
+      "seconds": 28.215,
+      "output_tokens": 52
+    },
+    {
+      "id": "q42",
+      "seconds": 27.732,
+      "output_tokens": 63
+    },
+    {
+      "id": "q43",
+      "seconds": 28.69,
+      "output_tokens": 74
+    },
+    {
+      "id": "q44",
+      "seconds": 28.638,
+      "output_tokens": 67
+    },
+    {
+      "id": "q45",
+      "seconds": 32.792,
+      "output_tokens": 61
+    },
+    {
+      "id": "q46",
+      "seconds": 53.789,
+      "output_tokens": 190
+    },
+    {
+      "id": "q47",
+      "seconds": 49.307,
+      "output_tokens": 177
+    },
+    {
+      "id": "q48",
+      "seconds": 25.378,
+      "output_tokens": 10
+    },
+    {
+      "id": "q49",
+      "seconds": 24.63,
+      "output_tokens": 10
+    }
+  ]
+}

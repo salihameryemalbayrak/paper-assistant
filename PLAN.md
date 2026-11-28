@@ -56,7 +56,18 @@ Takvim yok; her aşama, "bitti" kriteri sağlanınca tamamlanmış sayılır.
 - [x] 8d README: Mermaid mimari diyagramı, sonuç tabloları (her sayı kayıtlı sonuç dosyalarıyla karşılaştırıldı), bulgular, ekran görüntüsü (`docs/images/ui.png`).
   - Ekran görüntüsü varsayılan `hybrid_en` ile yeniden alınmalı (ilk görüntü eski varsayılanla alındı).
   - **Test edilmedi:** "Temiz bir makinede README adımlarıyla çalışıyor" kriteri. Her şey yalnızca bu Mac'te denendi. CI imajları amd64'te derliyor ve testleri çalıştırıyor, ama uçtan uca kurulumu denemiyor.
-- **Aşama 8 tamam.** Sıradaki: Aşama 8 yoklaması, ardından Aşama 9 (model karşılaştırma matrisi) ya da G1 (LangGraph).
+- **Aşama 8 tamam** (yoklama yapıldı). Truecasing eklendi (D47).
+
+**Aşama 9 (büyük ölçüde tamam, D48):**
+- [x] Küçük (qwen3:4b) ve büyük (qwen2.5:14b) model, aynı bağlamla.
+  - Doğru cevap 29 → 33/41; tablo 3 → 8/10; çıkarım 6 → 11/11. Tek sayfa sorularında 4B daha iyi (15/15).
+  - 14B, q02'de Çinceye kayıp anlamsız bir cevap üretti.
+- [x] Hız ölçümü (`eval.llm_speed`). Docker kapalıyken; takas sonuçla birlikte kaydediliyor.
+- [x] `TRANSLATE_MODEL`, `--stored-translations`, p95 gecikme.
+- [ ] Ticari API: kullanıcı kararıyla ölçülmedi (ücretsiz kalınıyor).
+- [ ] vLLM benchmark (Colab, T4): Notebook `Engine core initialization failed` verdi, geri alındı. Kullanıcı sonra deneyecek; hatanın asıl nedeni (üstteki satırlar) gerekiyor.
+- [ ] Prefill (prompt işleme) süresinin önbelleksiz ölçümü.
+- Sıradaki: Aşama 9 yoklaması, ardından G1 (LangGraph: tablo okuma aracı, belge karşılaştırma).
 
 **Oturum başında:**
 1. Docker Desktop'ı aç → `docker compose -f infra/docker-compose.yml up -d qdrant`
@@ -80,6 +91,7 @@ Takvim yok; her aşama, "bitti" kriteri sağlanınca tamamlanmış sayılır.
 - **RAGAS hakemi de yanılıyor:** q22'de bağlamda yazan "W = 4096" iddiasını reddetti (D39).
 - **RAGAS bağımlılığı `openai`'yi 3.3'e düşürdü:** instructor `jiter<0.15` istiyor; uygulama çalışıyor ama ileride çakışabilir (D39).
 - ~~Büyük/küçük harfe duyarlılık~~ → Çözüldü (D47): truecasing, küçük harfli sorularda evidence recall@5 0,493 → 0,707. Test: `uv run python -m eval.robustness`.
+- **Qwen Çinceye kayabiliyor:** 14B'de q02 cevabı tamamen bozuldu (D48); G2 çıktı doğrulama adayı.
 - **Qwen bazen Çince token sızdırıyor:** q01 cevabında "检索" (D38).
 - **Tablo cevapları zayıf:** Arama tabloları buluyor ama cevaplar 2/10 doğru. Bölünmüş tablolarda gereken satır bağlamda olmuyor; model satır okumada hata yapıyor (D36).
 - **Şekil ve karşılaştırma soruları zayıf:** Şekil sorularında R@1 = 0 (8 soru); karşılaştırmalarda R@5 0,438 (D35).
@@ -436,7 +448,7 @@ Türkçe soru ──► TR→EN çeviri ──► BM25(EN) + Dense(TR, EN) ─�
 - [x] Aşama 6 — Reranker (varsayılan kapalı: cevap kazancı ölçülmedi, D33)
 - [x] Aşama 7 — Tam eval + Langfuse (49 soru, RAGAS + yerel hakem, Langfuse self-host, CI'da hızlı eval)
 - [x] Aşama 8 — API + arayüz + Docker Compose (FastAPI, Streamlit, Docker; temiz makine testi yapılmadı)
-- [ ] Aşama 9 — Model karşılaştırma matrisi
+- [ ] Aşama 9 — Model karşılaştırma matrisi (4B ↔ 14B tamam; vLLM/Colab ve ticari API yok, D48)
 - [ ] G1 — LangGraph agentic akış
 - [ ] G2 — Guardrails
 - [ ] G3 — MCP sunucusu

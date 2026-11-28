@@ -953,3 +953,58 @@ Her karar için:
   - Derlemde ad olarak geçmeyen bir adı (yeni bir model) düzeltemez.
   - "llama" hayvan olarak da geçtiği için listede yok; "llama 2" yazılırsa düzeltilmez.
   - Dayanıklılık testi LLM gerektirdiği için CI'da değil, yerelde çalışıyor.
+
+### D48. Model karşılaştırması: Qwen3 4B ile Qwen2.5 14B, aynı bağlamla
+- **Soru:** "Küçük model + iyi arama yeterli mi?"
+- **Seçimler** (kullanıcı kararları):
+  - **Büyük model qwen2.5:14b** (Ollama, 4-bit, 9 GB).
+    - Qwen3'ün daha büyük instruct sürümü (30B-A3B, 4-bit 19 GB) ne 16 GB'lık Mac'e ne de Colab'ın T4'üne (16 GB) sığıyor.
+    - gemma3:12b hakem olduğu için cevap modeli olamazdı (self-preference, D39).
+    - phi4 ağırlıklı olarak İngilizce.
+  - **Ticari API ölçülmedi:** Proje ücretsiz kalıyor (CLAUDE.md, maliyet kuralı).
+  - **vLLM benchmark'ı (Colab) şimdilik ertelendi:** Notebook Colab'da `Engine core initialization failed` hatası verdi; asıl neden (hatanın üstündeki satırlar) henüz görülmedi. Notebook geri alındı.
+- **Deney tasarımı: tek değişken cevap modeli.**
+  - Çeviri modeli `TRANSLATE_MODEL` ile ayrıldı ve karşılaştırmada hep qwen3:4b. Böylece arama ve bağlam iki modelde aynı.
+  - Doğrulandı: 49 sorunun 49'unda bağlamdaki 5 chunk birebir aynı.
+- **Doğruluk** (hybrid_en, 18 makale, hakem gemma3:12b, answer accuracy ≥ 0,5):
+
+| | qwen3:4b-instruct | qwen2.5:14b |
+|---|---|---|
+| Doğru cevap (hakem) | 29/41 | 34/41 |
+| Doğru cevap (hakem + elle düzeltme) | 29/41 | **33/41** |
+| Ortalama answer accuracy | 0,470 | 0,561 |
+| Tablo | 3/10 | **8/10** |
+| Çıkarım (`inference`) | 6/11 | **11/11** |
+| Karşılaştırma | 7/8 | 8/8 |
+| Şekil | 4/8 | 5/8 |
+| Tek sayfa | **15/15** | 13/15 |
+| `paraphrase` / `term` | 13/14 · 10/16 | 13/14 · 10/16 |
+| Doğru ret | 8/8 | 8/8 |
+
+- **Elle kontrol (değişen cevaplar okundu):**
+  - q31 doğru. q45 ve q25 kısmen doğru.
+  - **q33'te hakem yanıldı:** 14B "BM25'te 7,3 puan artış" dedi, doğrusu 4,4. Hakem 0,5 verdi; sayıların doğruluğunda cömert (D40'taki kısmen doğru cevaplarla benzer).
+  - **q02'de 14B çöktü:** Cevap ortasında Çinceye geçip konuyla ilgisiz bir metin (telif hakkı) uyduruyor. 4B doğru cevaplamıştı. 4B'de de tek bir Çince kelime görülmüştü (D38); 14B'de cevabın tamamı bozuluyor. Kullanıcıya bu, "Dokümanda bulamadım"dan çok daha zararlı. G2 (çıktı doğrulama) için somut örnek.
+- **Yorum:**
+  - **Arama iyi olunca küçük model tek sayfa ve anlamca sorulan sorularda yetiyor** (15/15, 13/14; 14B daha iyi değil).
+  - **Tablo okuma ve çıkarımda yetmiyor:** Aynı tablo satırları önündeyken 14B 8/10, 4B 3/10. D36 ve D38'deki "darboğaz LLM'in tablo okuması" teşhisi doğrulandı.
+- **Hız** (`eval.llm_speed`: 49 gerçek prompt, yalnızca cevap üretimi, tek tek; Apple M4, 16 GB):
+
+| | qwen3:4b | qwen2.5:14b |
+|---|---|---|
+| Gecikme p50 / p95 | 7,1 / 17,5 sn | 32,8 / 49,4 sn (**geçersiz:** ağır takas) |
+| Ölçüm sırasında takas (diskten okunan sayfa) | 51 bin (~0,8 GB) | 477 bin (~7,5 GB) |
+| Cevap yazma hızı (Ollama API, tek prompt) | 22,8 token/sn | 7,1 token/sn |
+| Bellekte (Ollama) | 3,2 GB | 9 GB |
+| Ücret | yok (yerel) | yok (yerel) |
+
+- **Ölçüm ortamı dersleri:**
+  1. **Docker Desktop, konteynerler dursa bile ayrılan belleği (8 GB) sabit tutuyor** ("wired"; süreç listesinde görünmüyor). Açıkken 4B bile takasa düştü. Hız ölçümleri Docker kapalıyken yapıldı. Öneri: Docker Desktop'ın bellek sınırı 8'den 6 GB'a.
+  2. **Takasla ölçülen gecikme geçersiz.** `eval.llm_speed` artık ölçüm sırasındaki takas sayfalarını sonuçla birlikte yazıyor; iki kirli ölçüm sonuçlardan çıkarıldı.
+  3. **Canlı çeviri + 14B cevap modeli, Ollama'yı her soruda iki modeli değiştirmeye zorladı:** İkisi belleğe birlikte sığmıyor; her soruda 9 GB'lık model diskten yeniden yüklendi. Bu yüzden cevap eval'i ~1 saat sürdü (doğruluk etkilenmedi). `eval.run --answers --stored-translations` eklendi: kayıtlı çeviriler, bellekte yalnızca cevap modeli.
+  4. 4B'de gecikmenin çoğu muhtemelen prompt işleme (~1100 token; cevap yazma 53 token için ~2,3 sn). Ama önbelleğe takılmayan bir prefill ölçümü henüz yapılmadı.
+- **Karar:**
+  - Bu bilgisayarda varsayılan **qwen3:4b-instruct kalıyor:** 14B bellek yüzünden pratik değil (Docker'la birlikte sığmıyor, ~3 kat yavaş cevap yazma, q02'deki gibi çöküşler).
+  - Daha güçlü donanımda (GPU sunucusu, `gpu` profili) büyük model, kod değişmeden yalnızca `LLM_MODEL` ile kullanılabilir.
+  - Tablo ve çıkarım sorularını küçük modelle iyileştirmenin yolları: tablo okuma aracı (G1, LangGraph), tabloları satır satır metne çevirmek (D36).
+- **Sınırlar:** 41 soru, tek koşu, tek hakem (hakem sayılarda cömert, q33). Hız ölçümleri tek bilgisayarda; vLLM ve GPU ölçülmedi.

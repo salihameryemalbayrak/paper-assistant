@@ -27,6 +27,7 @@ from pathlib import Path
 from statistics import median
 
 from langchain_core.documents import Document
+from langchain_core.runnables import RunnableLambda
 
 from app.ask import CONTEXT_K, answer_kind, build_chain, check_citations, extract_citations
 from app.config import get_settings
@@ -202,6 +203,12 @@ def _found(item, texts: list[str], k: int) -> str | None:
     return f"{sum(found)}/{len(found)}"
 
 
+def percentile(values: list[float], p: float) -> float:
+    """Nearest-rank percentile: the smallest value with at least p% of the values <= it."""
+    ordered = sorted(values)
+    return ordered[max(0, -(-len(ordered) * p // 100) - 1)]
+
+
 def summarize_answers(rows: list[dict]) -> dict:
     """Automatic checks over the answers (no judge LLM; RAGAS comes in Phase 7)."""
     answerable = [r for r in rows if r["type"] != QuestionType.UNANSWERABLE]
@@ -224,10 +231,18 @@ def summarize_answers(rows: list[dict]) -> dict:
         ],
         "answers_with_invented_citation": [r["id"] for r in rows if r["invented_citations"]],
         "seconds_median": round(median(r["seconds"] for r in rows), 1),
+        "seconds_p95": round(percentile([r["seconds"] for r in rows], 95), 1),
     }
 
 
-def run_answers(model: str) -> dict:
+def run_answers(model: str, stored_translations: bool = False) -> dict:
+    """The full chain on every question.
+
+    stored_translations: use eval/translations.jsonl instead of translating live. Same
+    English queries as the translation model gives (deterministic, 41/41 identical, D47),
+    but only the answering LLM has to be in memory: comparing a 14B model, live
+    translation made Ollama swap the two models on every question (D48).
+    """
     settings = get_settings()
     items = load_dataset(DATASET)
     llm = get_chat_model(settings)
@@ -236,7 +251,13 @@ def run_answers(model: str) -> dict:
     retriever = build_retriever(settings.retriever, CONTEXT_K, model, reranker, candidates, depth)
     multi = len(BRANCHES[settings.retriever]) > 1
     # Live translation here: the answer eval measures the whole system, translation included.
-    translator = build_translator(llm) if needs_translation(settings.retriever, reranker) else None
+    translator = None
+    if needs_translation(settings.retriever, reranker) and stored_translations:
+        stored = load_translations(TRANSLATIONS, items)
+        english = {item.question: stored[item.id].en for item in items}
+        translator = RunnableLambda(lambda question: english[question])
+    elif needs_translation(settings.retriever, reranker):
+        translator = build_translator(get_chat_model(settings, settings.translate_model or None))
     chain = build_chain(retriever, llm, translator, load_vocabulary())
     chain.invoke("warm-up")  # loads the embedding model and the LLM (not traced)
 
@@ -284,6 +305,12 @@ def run_answers(model: str) -> dict:
         "git_commit": _git_commit(),
         "hardware": _hardware(),
         "llm": f"{settings.llm_model} @ {settings.llm_base_url}",
+        "translation_llm": (
+            load_translations(TRANSLATIONS, items)[items[0].id].model
+            if stored_translations
+            else settings.translate_model or settings.llm_model
+        ),
+        "translation": f"stored, {TRANSLATIONS}" if stored_translations else "live",
         "llm_temperature": settings.llm_temperature,
         "corpus": corpus_info(),
         "embedding_model": model,
@@ -368,13 +395,17 @@ def main() -> None:
         "--depth", type=int, default=None, help="results per branch before fusion (RETRIEVAL_DEPTH)"
     )
     # Quality gate for CI (--fast): exit with an error if the run falls below these.
+    parser.add_argument(
+        "--stored-translations", action="store_true",
+        help="--answers: English queries from eval/translations.jsonl, no live translation",
+    )  # fmt: skip
     parser.add_argument("--min-recall5", type=float, help="fail if page-level recall@5 is lower")
     parser.add_argument("--min-evidence5", type=float, help="fail if evidence recall@5 is lower")
     args = parser.parse_args()
 
     model = args.model or get_settings().embedding_model
     if args.answers:
-        result = run_answers(model)
+        result = run_answers(model, args.stored_translations)
         for row in result["per_question"]:
             flags = f" {row['kind'].upper()}" + " INVENTED" * bool(row["invented_citations"])
             print(f"\n{row['id']} ({row['type']}, {row['seconds']}s){flags}\n{row['answer']}")

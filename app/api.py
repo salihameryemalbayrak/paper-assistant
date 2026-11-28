@@ -99,7 +99,11 @@ def build_engine() -> Engine:
         s.retriever, CONTEXT_K, reranker=s.reranker, candidates=s.rerank_candidates,
         depth=s.retrieval_depth,
     )  # fmt: skip
-    translator = build_translator(llm) if needs_translation(s.retriever, s.reranker) else None
+    translator = (
+        build_translator(get_chat_model(s, s.translate_model or None))
+        if needs_translation(s.retriever, s.reranker)
+        else None
+    )
 
     def health() -> dict[str, Any]:
         store = get_vectorstore()

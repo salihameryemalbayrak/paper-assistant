@@ -157,7 +157,9 @@ def main() -> None:
         candidates=settings.rerank_candidates, depth=settings.retrieval_depth,
     )  # fmt: skip
     translator = (
-        build_translator(llm) if needs_translation(settings.retriever, settings.reranker) else None
+        build_translator(get_chat_model(settings, settings.translate_model or None))
+        if needs_translation(settings.retriever, settings.reranker)
+        else None
     )
     from app.truecase import load_vocabulary
 

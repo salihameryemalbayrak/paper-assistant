@@ -19,6 +19,9 @@ class Settings(BaseSettings):
     # Local servers ignore the key, but the OpenAI client requires a non-empty value.
     llm_api_key: SecretStr = SecretStr("not-needed")
     llm_temperature: float = 0.0
+    # Model for the TR -> EN query translation; empty = LLM_MODEL. A fixed translation model
+    # keeps retrieval identical when only the answering model is compared (Phase 9, D48).
+    translate_model: str = ""
     llm_timeout_s: float = 120.0
 
     # Vector database (Qdrant server, see infra/docker-compose.yml).

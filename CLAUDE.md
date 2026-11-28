@@ -168,6 +168,8 @@ Repo iskeleti oluştukça doldurulacak:
 | Eval sorularının kanıt kontrolü | `uv run python -m eval.check_evidence` (ifade biçimi: `uv run python -m eval.check_phrasing`) |
 | Cevap eval (LLM) | `uv run python -m eval.run --answers` (retriever `.env`'deki `RETRIEVER`; tek seferlik: `RETRIEVER=dense uv run ...`) |
 | Dayanıklılık testi (küçük harfli sorular, LLM) | `uv run python -m eval.robustness` → `docs/benchmarks/robustness/` |
+| Model karşılaştırması (cevap) | `LLM_MODEL=<model> uv run python -m eval.run --answers --stored-translations` (kayıtlı çeviriler: bellekte tek model; D48) |
+| LLM hız ölçümü | `uv run python -m eval.llm_speed build docs/benchmarks/answers/<dosya>.json` → `uv run python -m eval.llm_speed run` (Docker kapalıyken; takas sonuçla birlikte yazılır) |
 | Eval sorularını çevirme | `uv run python -m eval.translations` → `eval/translations.jsonl` (elle kontrol edilir) |
 | Tam eval (RAGAS, hakem LLM) | `uv run --group eval python -m eval.full docs/benchmarks/answers/<dosya>.json` (`--limit 3` ile deneme; hakem: `JUDGE_MODEL`) |
 | Langfuse (iz kaydı) | Bir kez: `uv run python infra/make_secrets.py` → `docker compose -f infra/docker-compose.yml -f infra/docker-compose.obs.yml --profile obs up -d` (arayüz http://localhost:3000; durdurma: aynı komut `... --profile obs down`) |

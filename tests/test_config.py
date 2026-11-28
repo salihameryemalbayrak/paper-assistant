@@ -45,3 +45,11 @@ def test_default_retriever_is_a_known_variant(monkeypatch):
 
     monkeypatch.delenv("RETRIEVER", raising=False)
     assert Settings(_env_file=None, llm_base_url="x", llm_model="y").retriever in RETRIEVERS
+
+
+def test_translate_model_defaults_to_the_answer_model():
+    from app.llm import get_chat_model
+
+    s = Settings(_env_file=None, llm_base_url="http://x/v1", llm_model="big")
+    assert get_chat_model(s).model_name == "big"
+    assert get_chat_model(s, "small").model_name == "small"

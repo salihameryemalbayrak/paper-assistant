@@ -1,0 +1,347 @@
+{
+  "mode": "full",
+  "date": "2026-11-28T16:01:55",
+  "git_commit": "c6e8768-dirty",
+  "hardware": "Apple M4, macOS 26.6.2",
+  "answers_file": "docs/benchmarks/answers/2026-11-28_18docs_hybrid_en_depth20_qwen2_5_14b.json",
+  "answering_llm": "qwen2.5:14b @ http://localhost:11434/v1",
+  "judge": "gemma3:12b @ http://localhost:11434/v1",
+  "judge_temperature": 0.0,
+  "metrics": [
+    "answer_accuracy"
+  ],
+  "ragas_metrics": "ragas.metrics.collections Faithfulness, AnswerRelevancy(strictness=1), AnswerAccuracy",
+  "faithfulness_context": "chunks under their citation labels, as in the answer prompt",
+  "answer_relevancy_embeddings": "intfloat/multilingual-e5-small",
+  "answer_accuracy_refusals": "scored 0 without a judge call",
+  "scored": 41,
+  "limit": null,
+  "seconds_total": 608,
+  "seconds_per_question_median": 15.2,
+  "summary": {
+    "all": {
+      "answer_accuracy": {
+        "mean": 0.561,
+        "n": 41,
+        "not_scored": 0
+      }
+    },
+    "single_page": {
+      "answer_accuracy": {
+        "mean": 0.65,
+        "n": 15,
+        "not_scored": 0
+      }
+    },
+    "table": {
+      "answer_accuracy": {
+        "mean": 0.55,
+        "n": 10,
+        "not_scored": 0
+      }
+    },
+    "figure": {
+      "answer_accuracy": {
+        "mean": 0.3438,
+        "n": 8,
+        "not_scored": 0
+      }
+    },
+    "comparison": {
+      "answer_accuracy": {
+        "mean": 0.625,
+        "n": 8,
+        "not_scored": 0
+      }
+    }
+  },
+  "per_question": [
+    {
+      "id": "q01",
+      "type": "single_page",
+      "kind": "answer",
+      "answer_accuracy": 0.75,
+      "seconds": 34.0
+    },
+    {
+      "id": "q02",
+      "type": "single_page",
+      "kind": "answer",
+      "answer_accuracy": 0.0,
+      "seconds": 16.2
+    },
+    {
+      "id": "q03",
+      "type": "single_page",
+      "kind": "answer",
+      "answer_accuracy": 0.5,
+      "seconds": 18.2
+    },
+    {
+      "id": "q04",
+      "type": "single_page",
+      "kind": "answer",
+      "answer_accuracy": 1.0,
+      "seconds": 15.2
+    },
+    {
+      "id": "q05",
+      "type": "single_page",
+      "kind": "answer",
+      "answer_accuracy": 0.75,
+      "seconds": 16.1
+    },
+    {
+      "id": "q06",
+      "type": "single_page",
+      "kind": "answer",
+      "answer_accuracy": 0.75,
+      "seconds": 16.9
+    },
+    {
+      "id": "q07",
+      "type": "table",
+      "kind": "answer",
+      "answer_accuracy": 1.0,
+      "seconds": 17.0
+    },
+    {
+      "id": "q08",
+      "type": "table",
+      "kind": "partial",
+      "answer_accuracy": 0.25,
+      "seconds": 19.1
+    },
+    {
+      "id": "q09",
+      "type": "table",
+      "kind": "refusal",
+      "answer_accuracy": 0.0,
+      "seconds": 0.0
+    },
+    {
+      "id": "q10",
+      "type": "table",
+      "kind": "answer",
+      "answer_accuracy": 0.75,
+      "seconds": 16.1
+    },
+    {
+      "id": "q11",
+      "type": "figure",
+      "kind": "answer",
+      "answer_accuracy": 0.25,
+      "seconds": 17.9
+    },
+    {
+      "id": "q12",
+      "type": "figure",
+      "kind": "refusal",
+      "answer_accuracy": 0.0,
+      "seconds": 0.0
+    },
+    {
+      "id": "q13",
+      "type": "figure",
+      "kind": "refusal",
+      "answer_accuracy": 0.0,
+      "seconds": 0.0
+    },
+    {
+      "id": "q14",
+      "type": "comparison",
+      "kind": "answer",
+      "answer_accuracy": 0.5,
+      "seconds": 16.6
+    },
+    {
+      "id": "q15",
+      "type": "comparison",
+      "kind": "answer",
+      "answer_accuracy": 0.5,
+      "seconds": 20.3
+    },
+    {
+      "id": "q16",
+      "type": "comparison",
+      "kind": "answer",
+      "answer_accuracy": 1.0,
+      "seconds": 17.5
+    },
+    {
+      "id": "q21",
+      "type": "single_page",
+      "kind": "answer",
+      "answer_accuracy": 0.75,
+      "seconds": 13.1
+    },
+    {
+      "id": "q22",
+      "type": "single_page",
+      "kind": "answer",
+      "answer_accuracy": 0.75,
+      "seconds": 14.5
+    },
+    {
+      "id": "q23",
+      "type": "single_page",
+      "kind": "refusal",
+      "answer_accuracy": 0.0,
+      "seconds": 0.0
+    },
+    {
+      "id": "q24",
+      "type": "single_page",
+      "kind": "answer",
+      "answer_accuracy": 1.0,
+      "seconds": 12.7
+    },
+    {
+      "id": "q25",
+      "type": "table",
+      "kind": "answer",
+      "answer_accuracy": 0.5,
+      "seconds": 13.7
+    },
+    {
+      "id": "q26",
+      "type": "figure",
+      "kind": "answer",
+      "answer_accuracy": 0.5,
+      "seconds": 14.1
+    },
+    {
+      "id": "q27",
+      "type": "figure",
+      "kind": "answer",
+      "answer_accuracy": 0.5,
+      "seconds": 16.6
+    },
+    {
+      "id": "q28",
+      "type": "comparison",
+      "kind": "answer",
+      "answer_accuracy": 0.5,
+      "seconds": 20.2
+    },
+    {
+      "id": "q29",
+      "type": "comparison",
+      "kind": "answer",
+      "answer_accuracy": 0.5,
+      "seconds": 17.8
+    },
+    {
+      "id": "q31",
+      "type": "table",
+      "kind": "answer",
+      "answer_accuracy": 1.0,
+      "seconds": 12.9
+    },
+    {
+      "id": "q32",
+      "type": "table",
+      "kind": "answer",
+      "answer_accuracy": 0.5,
+      "seconds": 18.6
+    },
+    {
+      "id": "q33",
+      "type": "table",
+      "kind": "answer",
+      "answer_accuracy": 0.5,
+      "seconds": 13.5
+    },
+    {
+      "id": "q34",
+      "type": "figure",
+      "kind": "answer",
+      "answer_accuracy": 0.5,
+      "seconds": 14.3
+    },
+    {
+      "id": "q35",
+      "type": "figure",
+      "kind": "answer",
+      "answer_accuracy": 0.5,
+      "seconds": 16.5
+    },
+    {
+      "id": "q36",
+      "type": "figure",
+      "kind": "answer",
+      "answer_accuracy": 0.5,
+      "seconds": 16.1
+    },
+    {
+      "id": "q37",
+      "type": "single_page",
+      "kind": "answer",
+      "answer_accuracy": 0.5,
+      "seconds": 15.0
+    },
+    {
+      "id": "q38",
+      "type": "single_page",
+      "kind": "answer",
+      "answer_accuracy": 0.75,
+      "seconds": 14.1
+    },
+    {
+      "id": "q39",
+      "type": "comparison",
+      "kind": "answer",
+      "answer_accuracy": 0.75,
+      "seconds": 14.9
+    },
+    {
+      "id": "q41",
+      "type": "single_page",
+      "kind": "answer",
+      "answer_accuracy": 0.75,
+      "seconds": 13.9
+    },
+    {
+      "id": "q42",
+      "type": "single_page",
+      "kind": "answer",
+      "answer_accuracy": 0.75,
+      "seconds": 12.9
+    },
+    {
+      "id": "q43",
+      "type": "single_page",
+      "kind": "answer",
+      "answer_accuracy": 0.75,
+      "seconds": 13.7
+    },
+    {
+      "id": "q44",
+      "type": "table",
+      "kind": "answer",
+      "answer_accuracy": 0.5,
+      "seconds": 14.3
+    },
+    {
+      "id": "q45",
+      "type": "table",
+      "kind": "answer",
+      "answer_accuracy": 0.5,
+      "seconds": 14.2
+    },
+    {
+      "id": "q46",
+      "type": "comparison",
+      "kind": "answer",
+      "answer_accuracy": 0.5,
+      "seconds": 19.7
+    },
+    {
+      "id": "q47",
+      "type": "comparison",
+      "kind": "answer",
+      "answer_accuracy": 0.75,
+      "seconds": 19.1
+    }
+  ]
+}

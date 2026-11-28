@@ -32,3 +32,12 @@ def test_quality_gate_reports_only_failed_thresholds():
     assert quality_gate(result, None, None) == []
     assert quality_gate(result, 0.65, 0.55) == []
     assert quality_gate(result, 0.74, 0.55) == ["recall@5 0.700 < 0.74"]
+
+
+def test_percentile_nearest_rank():
+    from eval.run import percentile
+
+    values = [float(v) for v in range(1, 21)]  # 1..20
+    assert percentile(values, 50) == 10.0
+    assert percentile(values, 95) == 19.0
+    assert percentile([7.0], 95) == 7.0

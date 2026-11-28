@@ -83,6 +83,24 @@ recall asks whether the sentence or table row the answer needs actually reaches 
 
 The judge agreed with hand labels on 37 of 41 answers ([D40](docs/DECISIONS.md)).
 
+**Small vs. larger model** (same retrieval and the same 5 chunks for both, translation fixed to
+Qwen3 4B; judge Gemma 3 12B; [D48](docs/DECISIONS.md)):
+
+| | Qwen3 4B Instruct | Qwen2.5 14B Instruct |
+|---|---|---|
+| Correct, all (answer accuracy ≥ 0.5, one judge error corrected by hand) | 29/41 | **33/41** |
+| Tables | 3/10 | **8/10** |
+| Questions needing a calculation or combination (`inference`) | 6/11 | **11/11** |
+| Single-page questions | **15/15** | 13/15 |
+| Refuses when the answer is not in the papers | 8/8 | 8/8 |
+| Answer decoding speed (Ollama, M4) | 22.8 tokens/s | 7.1 tokens/s |
+| Memory (Ollama) | 3.2 GB | 9 GB |
+
+With good retrieval the 4B model is enough for single-page and paraphrased questions; the
+14B model is much better at reading tables and combining numbers, but on a 16 GB laptop it
+does not fit next to Docker and is ~3× slower. Both run free, locally; a commercial API was
+not measured.
+
 **Findings**
 - **Query translation is what makes BM25 work** on Turkish questions over English papers
   (MRR 0.485 → 0.646 in an early 20-question run, [D32](docs/DECISIONS.md)).
@@ -99,7 +117,11 @@ The judge agreed with hand labels on 37 of 41 answers ([D40](docs/DECISIONS.md))
   names. Restoring their usual spelling from a corpus-derived vocabulary (truecasing) brings it
   back to 0.707 ([D47](docs/DECISIONS.md); `uv run python -m eval.robustness`).
 - **Main remaining weakness:** reading tables with a 4B model, even when the right rows are
-  in the context ([D38](docs/DECISIONS.md)).
+  in the context; a 14B model fixes most of it (tables 3/10 → 8/10) but does not fit this
+  laptop well ([D38](docs/DECISIONS.md), [D48](docs/DECISIONS.md)).
+- **Measure on a quiet machine:** Docker Desktop keeps its 8 GB reserved even with no
+  container running; with it open, model timings were swap-bound. Speed runs now record
+  swap activity ([D48](docs/DECISIONS.md)).
 
 ## Tech stack
 
