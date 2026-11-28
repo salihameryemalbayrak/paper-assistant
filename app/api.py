@@ -136,7 +136,7 @@ def create_app(engine_factory: Callable[[], Engine] = build_engine) -> FastAPI:
     def ask(request: AskRequest) -> AskResponse:
         from openai import APIConnectionError, APITimeoutError
 
-        from app.tracing import flush, trace_config
+        from app.tracing import trace_config
 
         engine: Engine = app.state.engine
         config = trace_config(engine.callbacks, name="api ask", tags=["api", engine.retriever])
@@ -146,8 +146,9 @@ def create_app(engine_factory: Callable[[], Engine] = build_engine) -> FastAPI:
         except (APIConnectionError, APITimeoutError) as e:
             raise HTTPException(503, f"LLM server unreachable: {type(e).__name__}") from e
         seconds = time.perf_counter() - start
-        if engine.callbacks:  # tracing on: send this trace now
-            flush()
+        # No flush() here: Langfuse sends traces from a background thread on its own. A
+        # flush would make the request wait for the upload, and retry for ~7 s per
+        # request when Langfuse is down (measured, D45). The CLI flushes because it exits.
         answer = out["answer"].strip()
         return AskResponse(
             question=request.question,

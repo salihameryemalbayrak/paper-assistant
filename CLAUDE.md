@@ -173,7 +173,7 @@ Repo iskeleti oluştukça doldurulacak:
 | CI eval verisi (chunk dosyası, GitHub Release) | Chunking değişince: `uv run python -m eval.ci_data build` → yazdırdığı `gh release create ...` komutu → `eval/ci_data.json`'u commit et |
 | API (FastAPI) | `uv run uvicorn app.api:app --port 8000` (dokümantasyon: http://localhost:8000/docs) |
 | Arayüz (Streamlit) | API açıkken `uv run --group ui streamlit run ui/app.py` (http://localhost:8501) |
-| Servisleri başlatma | _(Aşama 8)_ |
+| Servisleri başlatma (Docker) | `docker compose -f infra/docker-compose.yml up -d --build` (Qdrant + API + arayüz; LLM bilgisayarda). Profiller: `dev` (Ollama konteyneri), `gpu` (vLLM); ayrıntı `infra/docker-compose.yml` başı |
 
 ## Şimdilik yapılmayacaklar
 - Ham makale PDF'lerini repoya koymak

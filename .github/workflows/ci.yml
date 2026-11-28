@@ -87,3 +87,21 @@ jobs:
             fast-eval-result.json
             fast-eval.log
 
+
+  # The API and UI images build on amd64 (GitHub runners); a Mac checks arm64 locally (D45).
+  # Built only, never pushed.
+  docker:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+
+      - name: Build the API image (amd64)
+        run: docker build -f infra/Dockerfile --target api -t paper-assistant-api:ci .
+
+      - name: Build the UI image (amd64)
+        run: docker build -f infra/Dockerfile --target ui -t paper-assistant-ui:ci .
+
+      - name: Smoke test (CPU-only PyTorch, no PyTorch in the UI)
+        run: |
+          docker run --rm paper-assistant-api:ci python -c "import torch, platform; assert torch.version.cuda is None; print(torch.__version__, platform.machine())"
+          docker run --rm paper-assistant-ui:ci python -c "import importlib.util as u, streamlit; assert u.find_spec('torch') is None; print('streamlit', streamlit.__version__)"

@@ -841,3 +841,32 @@ Her karar için:
 - **Uçtan uca deneme** (gerçek API, `AppTest` ile):
   - "Mistral 7B, MMLU'da Llama 2 13B'yi kaç puan geçiyor?" sorusu 9,6 sn'de "60,1 − 55,6 = 4,5 puan" diye doğru cevaplandı; 5 kaynak listelendi, ilk kaynağın bağlantısı PDF'in 5. sayfasını açıyor.
   - D36'da bu soru (q25) reddedilmişti; kol derinliği 20 ile iki satır birlikte gelmiş olabilir (tek koşu).
+
+### D45. Docker: tek Dockerfile iki hedef, Mac'te LLM bilgisayarda, compose profilleri
+- **İmajlar** (`infra/Dockerfile`, uv'nin resmî Docker rehberine göre):
+  - uv ikili dosyası resmî imajdan sabit sürümle (0.13.9) kopyalanıyor.
+  - Bağımlılıklar ayrı bir katmanda ve önbellekli (`--mount=type=cache`, `--no-install-project`): yalnızca `uv.lock` değişince yeniden kuruluyor; kod değişikliği ~saniyeler.
+  - Kod `UV_COMPILE_BYTECODE=1` ile derleme anında bytecode'a çevriliyor. Çalışma zamanında root değil `app` kullanıcısı.
+  - `api` hedefi: ana bağımlılıklar, Linux'ta PyTorch'un CPU sürümü (`2.15.0+cpu`, CUDA yok; D23). **2,17 GB.**
+  - `ui` hedefi: yalnızca `ui` grubu (`--only-group ui`: Streamlit, httpx, pydantic-settings), PyTorch yok. **882 MB.**
+  - `.dockerignore`: `.env`, `.git`, `data/`, `docs/`, `tests/` imaja girmiyor.
+- **Veri imajda değil:** `data/` API konteynerine salt okunur bağlanıyor (BM25 için chunk'lar, `SOURCES.md`). Embedding modeli bir volume'a bir kez indiriliyor (`hf_cache`).
+- **Mac'te LLM konteynerde değil:** Docker'ın dokümantasyonuna göre konteynerlere GPU geçişi (`--gpus`) yalnızca Windows'ta, WSL 2 ile var. Mac'te Ollama konteynerde yalnızca CPU ile, çok yavaş çalışırdı.
+  - Bu yüzden varsayılan kurulumda LLM bilgisayarda (Metal); API konteyneri ona `host.docker.internal` üzerinden ulaşıyor.
+  - Ollama yalnızca `127.0.0.1`'i dinlese de Docker Desktop bu bağlantıyı yönlendiriyor (denendi: 8,9 sn'de cevap).
+  - Linux'ta `host.docker.internal` kendiliğinden yok; `extra_hosts: host-gateway` ile eklendi.
+- **Profiller** (CLAUDE.md):
+  - Varsayılan: Qdrant + API + arayüz.
+  - `dev`: Ollama konteyneri, `ollama/ollama:0.40.19` (Linux/Windows).
+  - `gpu`: vLLM, `vllm/vllm-openai:v0.34.0`, NVIDIA GPU, ~11 GB imaj; Mac'te **test edilmedi**.
+  - `obs`: Langfuse (D41).
+  - Hangi LLM'in kullanılacağı kodda değil, tek bir değişkende: `DOCKER_LLM_BASE_URL`. Model sunucusu kuralının Docker'daki karşılığı.
+  - İmaj etiketleri ve mimarileri Docker Hub API'sinden kontrol edildi (Ollama ve vLLM: arm64 + amd64).
+- **Ağ:** Ana compose ve Langfuse compose aynı proje adını (`infra`) taşıyor, yani aynı Docker ağında. API konteyneri izleri `langfuse-web:3000` adresine gönderiyor (denendi: izler geldi). Bütün portlar yalnızca `127.0.0.1`'de.
+- **Bulunan hata: Langfuse kapalıyken her istek ~7 sn bekliyordu.**
+  - Ölçüm: zincir 1,96 sn, istek 10,06 sn; zincir 5,37 sn, istek 11,89 sn.
+  - Neden: API her istekten sonra `flush()` çağırıyordu. `flush()` bekleyen izleri gönderip bitmesini bekliyor; Langfuse yokken SDK yeniden denedikçe istek de bekliyordu.
+  - SDK izleri zaten arka planda kendi iş parçacığında gönderiyor. `flush()` yalnızca hemen kapanan CLI komutları için gerekli.
+  - Düzeltme: API'de `flush()` yok. Ölçüm: Langfuse kapalıyken istek 3,32 sn / zincir 3,25 sn; Langfuse açılınca izler yine geliyor.
+- **amd64:** Mac'te emülasyonla (QEMU) derlemek yavaş ve ~2 GB ek disk istiyordu (boş alan 15 GB). Bunun yerine CI'a `docker` işi eklendi: GitHub'ın amd64 makinelerinde iki imaj her push'ta derleniyor ve kısa bir duman testi çalışıyor (CPU'lu PyTorch, arayüzde PyTorch yok). İmajlar hiçbir yere yüklenmiyor.
+- **Disk:** Derleme sırasında boş alan 8,9 GB'a düştü. `docker builder prune` ve `docker image prune` ile 15 GB'a çıktı. README'de Docker Desktop'a disk sınırı konması öneriliyor.

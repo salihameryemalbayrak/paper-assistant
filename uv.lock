@@ -2797,6 +2797,7 @@ ingest = [
 ]
 ui = [
     { name = "httpx" },
+    { name = "pydantic-settings" },
     { name = "streamlit" },
 ]
 
@@ -2827,6 +2828,7 @@ eval = [{ name = "ragas", specifier = ">=0.4.4" }]
 ingest = [{ name = "docling", specifier = ">=2.152.0" }]
 ui = [
     { name = "httpx", specifier = ">=0.28" },
+    { name = "pydantic-settings", specifier = ">=2" },
     { name = "streamlit", specifier = ">=1.67.0" },
 ]
 

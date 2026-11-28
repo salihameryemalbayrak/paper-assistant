@@ -1,11 +1,24 @@
-# Local services.
+# Local services. Run from the repository root.
 #
-# Qdrant (vector database, always needed):
-#   Start:  docker compose -f infra/docker-compose.yml up -d qdrant
-#   UI:     http://localhost:6333/dashboard
-#   Stop:   docker compose -f infra/docker-compose.yml down
+# Everything (Qdrant + API + web UI), LLM = Ollama running natively on this machine:
+#   docker compose -f infra/docker-compose.yml up -d --build
+#   UI http://localhost:8501 · API http://localhost:8000/docs · Qdrant http://localhost:6333/dashboard
+# Only Qdrant (for the CLI and the evals):
+#   docker compose -f infra/docker-compose.yml up -d qdrant
+# Stop: docker compose -f infra/docker-compose.yml down
 #
-# Langfuse (tracing, optional): infra/docker-compose.obs.yml, profile "obs".
+# Profiles (D45):
+#   dev  Ollama in a container (Linux/Windows; on a Mac it would be CPU-only, see below):
+#        DOCKER_LLM_BASE_URL=http://ollama:11434/v1 docker compose -f infra/docker-compose.yml --profile dev up -d
+#        docker compose -f infra/docker-compose.yml exec ollama ollama pull qwen3:4b-instruct
+#   gpu  vLLM on an NVIDIA GPU (Linux/WSL 2; LLM_MODEL must equal VLLM_MODEL):
+#        DOCKER_LLM_BASE_URL=http://vllm:8000/v1 LLM_MODEL=Qwen/Qwen3-4B-Instruct-2507 \
+#          docker compose -f infra/docker-compose.yml --profile gpu up -d
+#   obs  Langfuse: infra/docker-compose.obs.yml
+#
+# Docker Desktop on macOS cannot pass the GPU to containers (GPU passthrough exists only
+# on Windows with WSL 2, Docker docs), so on a Mac the LLM runs natively (Metal) and the
+# API container reaches it at host.docker.internal.
 
 services:
   qdrant:
@@ -22,3 +35,79 @@ services:
       # and survives container restarts and removals.
       - ../data/qdrant:/qdrant/storage
     restart: unless-stopped
+
+  api:
+    build:
+      context: ..
+      dockerfile: infra/Dockerfile
+      target: api
+    image: paper-assistant-api:local
+    env_file:
+      - path: ../.env # LLM_MODEL, RETRIEVER, ... (optional file)
+        required: false
+    environment:
+      # container addresses override the ones in .env (those are for the host)
+      QDRANT_URL: http://qdrant:6333
+      LLM_BASE_URL: ${DOCKER_LLM_BASE_URL:-http://host.docker.internal:11434/v1}
+      LLM_MODEL: ${LLM_MODEL:-qwen3:4b-instruct}
+      LANGFUSE_BASE_URL: http://langfuse-web:3000 # only used if LANGFUSE_* keys are set
+    extra_hosts:
+      - "host.docker.internal:host-gateway" # works on Linux too (Docker Desktop has it built in)
+    volumes:
+      - ../data:/app/data:ro # chunks (BM25) and SOURCES.md; not baked into the image
+      - hf_cache:/cache/huggingface # embedding model, downloaded once
+    ports:
+      - "127.0.0.1:8000:8000"
+    depends_on:
+      - qdrant
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:8000/health')"]
+      interval: 10s
+      timeout: 5s
+      retries: 3
+      start_period: 300s # first start downloads the embedding model (~470 MB)
+    restart: unless-stopped
+
+  ui:
+    build:
+      context: ..
+      dockerfile: infra/Dockerfile
+      target: ui
+    image: paper-assistant-ui:local
+    environment:
+      API_URL: http://api:8000
+    ports:
+      - "127.0.0.1:8501:8501"
+    depends_on:
+      api:
+        condition: service_healthy
+    restart: unless-stopped
+
+  # --- profile dev: Ollama in a container ---
+  ollama:
+    profiles: [dev]
+    image: ollama/ollama:0.40.19 # arm64 + amd64
+    volumes:
+      - ollama_models:/root/.ollama
+    restart: unless-stopped
+
+  # --- profile gpu: vLLM on an NVIDIA GPU (not testable on a Mac) ---
+  vllm:
+    profiles: [gpu]
+    image: vllm/vllm-openai:v0.34.0 # ~11 GB; pull it only on the GPU machine
+    command: ["--model", "${VLLM_MODEL:-Qwen/Qwen3-4B-Instruct-2507}", "--max-model-len", "8192"]
+    volumes:
+      - hf_cache:/root/.cache/huggingface
+    ipc: host # vLLM uses shared memory between its processes
+    deploy:
+      resources:
+        reservations:
+          devices:
+            - driver: nvidia
+              count: all
+              capabilities: [gpu]
+    restart: unless-stopped
+
+volumes:
+  hf_cache:
+  ollama_models:

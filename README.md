@@ -96,6 +96,36 @@ warning for any cited label that was not in the context, and the sources: each o
 the chunk given to the model and links to the paper's PDF at the cited page. The page is a
 thin client of the API (`API_URL`, default `http://localhost:8000`) and loads no model.
 
+## Run with Docker
+
+Qdrant, the API and the web UI in containers; the LLM runs natively (Ollama on a Mac uses
+the GPU; Docker Desktop on macOS cannot give containers a GPU):
+
+```bash
+ollama serve                                               # the LLM, on the host
+docker compose -f infra/docker-compose.yml up -d --build   # Qdrant + API + UI
+# UI http://localhost:8501 · API http://localhost:8000/docs
+```
+
+The index must exist (`uv run python -m ingest.index`, see Quickstart); `data/` is mounted
+read-only into the API container, and the embedding model is downloaded once into a volume.
+
+| Profile | What it adds | When |
+|---|---|---|
+| _(none)_ | Qdrant, API, UI | default; LLM on the host (`host.docker.internal`) |
+| `dev` | Ollama in a container | Linux / Windows: `DOCKER_LLM_BASE_URL=http://ollama:11434/v1 ... --profile dev up -d` |
+| `gpu` | vLLM on an NVIDIA GPU | Linux / WSL 2: `DOCKER_LLM_BASE_URL=http://vllm:8000/v1 LLM_MODEL=<model> ... --profile gpu up -d` |
+| `obs` | Langfuse | `infra/docker-compose.obs.yml` (see Tracing) |
+
+Stop: `docker compose -f infra/docker-compose.yml down`. If Langfuse is running too, this
+prints "Network infra_default Resource is still in use" (both files share the `infra`
+network, so the API can send traces); to stop everything, pass both files:
+`docker compose -f infra/docker-compose.yml -f infra/docker-compose.obs.yml --profile obs down`.
+
+Images: API ~2.2 GB (CPU-only PyTorch), UI ~0.9 GB (no PyTorch); arm64 is built on a Mac,
+amd64 in CI. Set a disk limit in Docker Desktop (Settings → Resources) and clean the build
+cache now and then (`docker builder prune`).
+
 ## Tracing (optional, Langfuse)
 
 Every question can be traced step by step (translation, each retriever branch, fusion,

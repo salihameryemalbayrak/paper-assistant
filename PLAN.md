@@ -48,7 +48,11 @@ Takvim yok; her aşama, "bitti" kriteri sağlanınca tamamlanmış sayılır.
 - Kalite kapısı: R@5 ≥ 0,74, evidence ≥ 0,55. İş ~4 dk sürüyor (vektöre çevirme 217 sn).
 - **Aşama 7 tamam.**
 
-**Sıradaki:** Aşama 7 yoklaması, ardından Aşama 8 (FastAPI + Streamlit + Docker Compose).
+**Aşama 8 (devam ediyor):**
+- [x] 8a FastAPI: `/ask`, `/health` (D43).
+- [x] 8b Streamlit arayüzü, PDF'i ilgili sayfada açan kaynak bağlantıları (D44).
+- [x] 8c Docker: API ve arayüz imajları; compose profilleri `dev` / `gpu` / `obs`; CI'da amd64 derlemesi. Langfuse kapalıyken oluşan yavaşlık düzeltildi (D45).
+- [ ] 8d README: mimari diyagram, sonuç tabloları, ekran görüntüsü.
 
 **Oturum başında:**
 1. Docker Desktop'ı aç → `docker compose -f infra/docker-compose.yml up -d qdrant`
