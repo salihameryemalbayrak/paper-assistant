@@ -29,6 +29,7 @@ def client(answer: str = "Ragas sadakati ölçer [ragas, s.3, §3].", chain=None
             retriever="fake",
             health=health or (lambda: {"chunks": 1}),
             callbacks=[],
+            arxiv_ids={"ragas": "2309.15217v2"},
         )
 
     return TestClient(create_app(engine))
@@ -45,6 +46,13 @@ def test_ask_returns_answer_sources_and_checks():
     )  # original text, not search_text
     assert body["invented_citations"] == []
     assert body["query_en"] is None  # no translator in this chain
+    assert body["sources"][0]["url"] == "https://arxiv.org/pdf/2309.15217v2#page=3"
+
+
+def test_pdf_url_is_none_for_an_unknown_paper():
+    from app.api import pdf_url
+
+    assert pdf_url({"ragas": "2309.15217v2"}, "user_doc", 4) is None
 
 
 def test_invented_citation_and_refusal_are_reported():

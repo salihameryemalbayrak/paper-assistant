@@ -15,7 +15,7 @@ Usage:
 import time
 from collections.abc import Callable
 from contextlib import asynccontextmanager
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from typing import Any
 
 from fastapi import FastAPI, HTTPException
@@ -47,6 +47,7 @@ class Source(BaseModel):
     section: str
     chunk_id: str
     text: str
+    url: str | None  # the paper's PDF opened at the cited page, e.g. ...pdf/2305.14314v1#page=2
 
 
 class AskResponse(BaseModel):
@@ -70,6 +71,15 @@ class Engine:
     retriever: str
     health: Callable[[], dict[str, Any]]
     callbacks: list  # tracing handlers (app.tracing), [] when tracing is off
+    arxiv_ids: dict[str, str] = field(default_factory=dict)  # paper -> pinned arXiv id
+
+
+PDF_URL = "https://arxiv.org/pdf/{arxiv_id}#page={page}"  # #page=N: browsers' PDF viewers
+
+
+def pdf_url(arxiv_ids: dict[str, str], paper: str, page: int) -> str | None:
+    arxiv_id = arxiv_ids.get(paper)
+    return PDF_URL.format(arxiv_id=arxiv_id, page=page) if arxiv_id else None
 
 
 def build_engine() -> Engine:
@@ -80,6 +90,7 @@ def build_engine() -> Engine:
     from app.tracing import get_callbacks
     from app.translate import build_translator
     from app.vectorstore import get_vectorstore
+    from ingest.download import SOURCES_FILE, parse_sources
 
     s = get_settings()
     llm = get_chat_model(s)
@@ -99,6 +110,10 @@ def build_engine() -> Engine:
         retriever=s.retriever + (f" + rerank {s.reranker}" if s.reranker else ""),
         health=health,
         callbacks=get_callbacks(s),
+        arxiv_ids={
+            src.short_name: src.arxiv_id
+            for src in parse_sources(SOURCES_FILE.read_text(encoding="utf-8"))
+        },
     )
 
 
@@ -147,6 +162,7 @@ def create_app(engine_factory: Callable[[], Engine] = build_engine) -> FastAPI:
                     section=d.metadata["section"],
                     chunk_id=d.metadata["chunk_id"],
                     text=d.metadata["text"],
+                    url=pdf_url(engine.arxiv_ids, d.metadata["paper"], d.metadata["pages"][0]),
                 )
                 for d in out["docs"]
             ],

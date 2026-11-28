@@ -1,0 +1,6 @@
+# Streamlit settings for ui/app.py (read from the working directory).
+[browser]
+gatherUsageStats = false  # no usage statistics to Streamlit
+
+[server]
+address = "127.0.0.1"  # this machine only (the Docker image overrides it)

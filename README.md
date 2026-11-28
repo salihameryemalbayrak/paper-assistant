@@ -84,6 +84,18 @@ curl -s -X POST localhost:8000/ask -H 'Content-Type: application/json' \
   -d '{"question": "QLoRA hangi üç yenilikle bellek tasarrufu sağlıyor?"}'
 ```
 
+## Web UI (Streamlit)
+
+```bash
+uv run uvicorn app.api:app --port 8000          # 1. the API (see above)
+uv run --group ui streamlit run ui/app.py       # 2. the page: http://localhost:8501
+```
+
+Ask in Turkish; the answer comes with a badge (cited answer / partial / not found), a
+warning for any cited label that was not in the context, and the sources: each one opens
+the chunk given to the model and links to the paper's PDF at the cited page. The page is a
+thin client of the API (`API_URL`, default `http://localhost:8000`) and loads no model.
+
 ## Tracing (optional, Langfuse)
 
 Every question can be traced step by step (translation, each retriever branch, fusion,

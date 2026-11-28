@@ -172,6 +172,7 @@ Repo iskeleti oluştukça doldurulacak:
 | Langfuse (iz kaydı) | Bir kez: `uv run python infra/make_secrets.py` → `docker compose -f infra/docker-compose.yml -f infra/docker-compose.obs.yml --profile obs up -d` (arayüz http://localhost:3000; durdurma: aynı komut `... --profile obs down`) |
 | CI eval verisi (chunk dosyası, GitHub Release) | Chunking değişince: `uv run python -m eval.ci_data build` → yazdırdığı `gh release create ...` komutu → `eval/ci_data.json`'u commit et |
 | API (FastAPI) | `uv run uvicorn app.api:app --port 8000` (dokümantasyon: http://localhost:8000/docs) |
+| Arayüz (Streamlit) | API açıkken `uv run --group ui streamlit run ui/app.py` (http://localhost:8501) |
 | Servisleri başlatma | _(Aşama 8)_ |
 
 ## Şimdilik yapılmayacaklar

@@ -821,3 +821,23 @@ Her karar için:
 - **Hata kodları:** LLM sunucusuna ulaşılamazsa (`openai.APIConnectionError`, `APITimeoutError`) 500 değil **503** dönüyor. "Sunucu hatası" yerine "bağımlı servis yok" bilgisi veriliyor.
 - **Test edilebilirlik:** `create_app(engine_factory)` testlerde sahte bir motor (sahte LLM ve retriever) alıyor. 8 test Ollama, Qdrant ve `.env` olmadan çalışıyor. Bunun için iz kaydı açık değilse `flush()` çağrılmıyor; `flush()` ayarları okuyup `.env` istediği için CI'da kırılırdı.
 - **Gerçek deneme** (Apple M4, qwen3:4b-instruct, `dense_tr_bm25_en`): Başlangıç ~11 sn. `/health` 1734 chunk gösterdi. QLoRA sorusu 10,1 sn'de doğru ve kaynaklı cevaplandı; uydurma etiket yok.
+
+### D44. Arayüz: Streamlit, API'nin ince istemcisi
+- **Neden Streamlit:** Yalnızca Python ile, HTML/JavaScript yazmadan etkileşimli bir sayfa. Veri ve ML demolarında yaygın; CLAUDE.md'deki seçim.
+  - Alternatifler: Gradio (benzer, daha çok model demoları için), React (ayrı bir frontend projesi; bu aşama için fazla).
+- **Mimari: ince istemci.** Sayfa (`ui/app.py`) yalnızca API'yi HTTP ile çağırıyor (`API_URL`); model yüklemiyor.
+  - Artıları: Arayüz ve API ayrı konteynerlerde çalışabiliyor; embedding modeli ve LLM istemcisi tek yerde (API) duruyor; başka istemciler (G3'teki MCP sunucusu) aynı API'yi kullanabilecek.
+  - Bedeli: Arayüz için API'nin de açık olması gerekiyor.
+- **Streamlit'in çalışma modeli:** Her etkileşimde (düğme, metin) betik baştan sona yeniden çalışıyor. Son cevap `st.session_state`'te tutuluyor, yoksa başka bir şeye tıklayınca ekrandan kaybolurdu. Örnek soru düğmeleri soru kutusunu `on_click` geri çağrısıyla dolduruyor.
+- **Tıklanabilir kaynaklar:**
+  - Her kaynak açılır bir kutu: başlık etiket ve bölüm, içerik LLM'e verilen chunk metni.
+  - API her kaynak için PDF'i tam o sayfada açan bir bağlantı döndürüyor (`https://arxiv.org/pdf/<id>#page=N`; tarayıcıların PDF görüntüleyicileri `#page=N` ekini tanıyor). arXiv kimliği `SOURCES.md`'den okunuyor; bilinmeyen bir belgede bağlantı `None`.
+- **Test edilebilirlik:**
+  - API çağrısı ve hata mesajları Streamlit'ten bağımsız bir modülde (`ui/client.py`). `httpx.MockTransport` ile 8 test, CI'da çalışıyor.
+  - Sayfanın kendisi Streamlit'in `AppTest` aracıyla tarayıcısız test ediliyor (2 test; `ui` grubu gerektiği için CI'da atlanıyor).
+  - Tuzak: `AppTest.from_file` göreli yolları çalışma klasörüne değil, çağıran dosyanın klasörüne göre çözüyor; mutlak yol verildi.
+- **Gizlilik:** Streamlit varsayılan olarak kullanım istatistiği gönderiyor; `.streamlit/config.toml` ile kapatıldı (`gatherUsageStats = false`). Sunucu yalnızca `127.0.0.1`'de dinliyor.
+- **Bağımlılık:** Streamlit (pandas, pyarrow vb.) ayrı bir `ui` grubunda; API imajına girmiyor.
+- **Uçtan uca deneme** (gerçek API, `AppTest` ile):
+  - "Mistral 7B, MMLU'da Llama 2 13B'yi kaç puan geçiyor?" sorusu 9,6 sn'de "60,1 − 55,6 = 4,5 puan" diye doğru cevaplandı; 5 kaynak listelendi, ilk kaynağın bağlantısı PDF'in 5. sayfasını açıyor.
+  - D36'da bu soru (q25) reddedilmişti; kol derinliği 20 ile iki satır birlikte gelmiş olabilir (tek koşu).
