@@ -809,3 +809,15 @@ Her karar için:
   - Vektöre çevirme 217 sn (M4'te 25 sn); iş toplam ~4 dk.
   - Eşikler: Recall@5 ≥ 0,74, evidence recall@5 ≥ 0,55 (yaklaşık bir soru aşağısı). Tam mevcut değer seçilmedi: bir sorunun bir sıra kayması CI'ı kırar ve başka yerde kazanç getiren bilinçli değişiklikleri engellerdi. Eşik ancak bilerek, gerektiren değişiklikle birlikte düşürülür.
 - **İyileştirme fırsatı (yapılmadı):** Vektörler chunk özeti + model adıyla önbelleğe alınırsa her koşuda 3,5 dk kazanılır (ör. Qdrant'ın diske yazan yerel modu + `actions/cache`). Şimdilik erken optimizasyon.
+
+### D43. HTTP API: FastAPI, zincir başlangıçta bir kez kuruluyor
+- **Neden FastAPI:** İstek ve yanıt şemaları Pydantic ile tanımlanıyor; gelen JSON otomatik doğrulanıyor (boş soru → 422). `/docs` adresinde etkileşimli dokümantasyon kendiliğinden oluşuyor. İş ilanlarında en sık geçen Python API çatısı.
+  - Alternatifler: Flask (şema doğrulama ve otomatik dokümantasyon yok, elle yazılır), Django (bir API için fazla ağır).
+- **Uç noktalar** (`app/api.py`):
+  - `POST /ask`: cevap, türü (answer/partial/refusal), İngilizce sorgu, kaynaklar (etiket, makale, sayfalar, bölüm, chunk metni), uydurma etiketler, süre, modeller. `app.ask`'ın ekrana yazdığı her şey JSON olarak.
+  - `GET /health`: Qdrant'taki indeksin nokta sayısı; ulaşılamazsa 503.
+- **Zincir bir kez kuruluyor:** FastAPI'nin `lifespan` mekanizmasıyla, uygulama açılırken. Embedding modelini yüklemek ~11 sn sürüyor; her istekte tekrarlanmıyor.
+- **Uç nokta senkron (`def`):** `chain.invoke` senkron. FastAPI senkron uç noktaları ayrı bir iş parçacığı havuzunda çalıştırıyor; bir istek LLM'i beklerken diğerleri bloklanmıyor. `async def` kullanılsaydı senkron çağrı olay döngüsünü (event loop) kilitlerdi.
+- **Hata kodları:** LLM sunucusuna ulaşılamazsa (`openai.APIConnectionError`, `APITimeoutError`) 500 değil **503** dönüyor. "Sunucu hatası" yerine "bağımlı servis yok" bilgisi veriliyor.
+- **Test edilebilirlik:** `create_app(engine_factory)` testlerde sahte bir motor (sahte LLM ve retriever) alıyor. 8 test Ollama, Qdrant ve `.env` olmadan çalışıyor. Bunun için iz kaydı açık değilse `flush()` çağrılmıyor; `flush()` ayarları okuyup `.env` istediği için CI'da kırılırdı.
+- **Gerçek deneme** (Apple M4, qwen3:4b-instruct, `dense_tr_bm25_en`): Başlangıç ~11 sn. `/health` 1734 chunk gösterdi. QLoRA sorusu 10,1 sn'de doğru ve kaynaklı cevaplandı; uydurma etiket yok.

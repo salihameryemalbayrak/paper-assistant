@@ -67,6 +67,23 @@ Fast-eval results are saved to `docs/benchmarks/fast_eval/` with the model, hard
 
 The model server is configured only through environment variables (`LLM_BASE_URL`, `LLM_MODEL`, `LLM_API_KEY`). To switch to vLLM or another provider, edit `.env`; no code changes are needed.
 
+## HTTP API
+
+```bash
+uv run uvicorn app.api:app --port 8000   # Qdrant and the LLM server must be running
+```
+
+- `POST /ask` with `{"question": "..."}` returns the answer, its kind (answer / partial /
+  refusal), the English query, the cited sources (label, paper, pages, section, text) and
+  any cited label that was not in the context.
+- `GET /health` checks the vector index (`{"status": "ok", "chunks": 1734}`).
+- Interactive documentation: http://localhost:8000/docs
+
+```bash
+curl -s -X POST localhost:8000/ask -H 'Content-Type: application/json' \
+  -d '{"question": "QLoRA hangi üç yenilikle bellek tasarrufu sağlıyor?"}'
+```
+
 ## Tracing (optional, Langfuse)
 
 Every question can be traced step by step (translation, each retriever branch, fusion,
