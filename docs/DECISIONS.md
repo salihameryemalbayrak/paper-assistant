@@ -870,3 +870,40 @@ Her karar için:
   - Düzeltme: API'de `flush()` yok. Ölçüm: Langfuse kapalıyken istek 3,32 sn / zincir 3,25 sn; Langfuse açılınca izler yine geliyor.
 - **amd64:** Mac'te emülasyonla (QEMU) derlemek yavaş ve ~2 GB ek disk istiyordu (boş alan 15 GB). Bunun yerine CI'a `docker` işi eklendi: GitHub'ın amd64 makinelerinde iki imaj her push'ta derleniyor ve kısa bir duman testi çalışıyor (CPU'lu PyTorch, arayüzde PyTorch yok). İmajlar hiçbir yere yüklenmiyor.
 - **Disk:** Derleme sırasında boş alan 8,9 GB'a düştü. `docker builder prune` ve `docker image prune` ile 15 GB'a çıktı. README'de Docker Desktop'a disk sınırı konması öneriliyor.
+
+### D46. Varsayılan retriever `hybrid_en`: D32'nin kararı büyük eval setinde tersine döndü
+- **Nasıl ortaya çıktı:** README'nin sonuç tablosu için dört varyant aynı koşullarda yeniden ölçüldü (49 soru, 18 makale, kol derinliği 20, e5-small, Apple M4). D32'deki karar 20 soru, 5 makale, derinlik 5 ve yalnızca sayfa düzeyindeki ölçütle verilmişti.
+- **Hızlı eval** (41 cevaplanabilir / 25 kanıtlı soru):
+
+| Varyant | Sayfa R@5 | R@10 | MRR | Evidence recall@5 | `term` R@5 | `paraphrase` R@5 | `inference` R@5 |
+|---|---|---|---|---|---|---|---|
+| dense (TR) | 0,561 | 0,780 | 0,512 | 0,407 | 0,500 | 0,571 | 0,636 |
+| bm25_en | 0,695 | 0,829 | 0,580 | 0,353 | 0,844 | 0,643 | 0,545 |
+| **hybrid_en** | **0,780** | 0,866 | 0,539 | **0,707** | 0,719 | 0,893 | 0,727 |
+| dense_tr_bm25_en (eski varsayılan) | 0,768 | 0,866 | 0,509 | 0,587 | 0,719 | 0,893 | 0,682 |
+
+- **Cevap düzeyinde doğrulandı** (kural: arama değişikliği ölçülmeden birleştirilmez; D33'te arama iyileşip cevaplar iyileşmemişti):
+
+| | dense_tr_bm25_en | hybrid_en |
+|---|---|---|
+| Answer accuracy ≥ 0,5 (hakem gemma3:12b) | 26/41 | **29/41** |
+| Answer accuracy ortalaması | 0,433 | **0,470** |
+| `paraphrase` soruları doğru | 11/14 | **13/14** |
+| Doğru ret | 8/8 | 8/8 |
+| Gecikme (ortanca) | 10,1 sn | 9,9 sn |
+
+- **Değişen cevaplar elle okundu; hakemin kararları gerçek değişikliklere karşılık geliyor:**
+  - **Kazanılanlar:**
+    - q05: Ret → doğru "query:/passage:". D34'teki kardeş makale sorunu çözüldü.
+    - q21: "belleğin tümünü kullanabiliyor" → doğru "%20,4–38,2".
+    - q23: Artık doğru sayfayı (s.4) kaynak gösteriyor.
+    - q26: "Inner Monologue" → doğru Standard / CoT / Act-only.
+  - **Kaybedilen:** q36 (doğru cevap → ret).
+- **Neden D32'den farklı:**
+  - D32'de iki dense kol, eşit ağırlıklı RRF'de BM25'in tek kolunu bastırıyordu (q13). Derin listelerde (20) ve anlamca sorulan sorularda bu tersine dönüyor gibi görünüyor: İngilizce çeviriyle yapılan dense arama tam bu tür sorularda güçlü (`paraphrase` 13/14). Bu bir açıklama; ayrıca ölçülmedi.
+  - **Ders:** Küçük ve terim ağırlıklı bir eval setiyle verilen kararlar, set büyüyünce yeniden ölçülmeli. D32'de "Aşama 7'de yeniden ölçülecek" notu vardı; ölçüm yapılınca karar değişti.
+- **Değişiklikler:**
+  - `RETRIEVER=hybrid_en` (config, `.env.example`).
+  - CI kalite kapısı `hybrid_en` için: R@5 ≥ 0,75, evidence recall@5 ≥ 0,67 (yaklaşık bir soru aşağısı).
+  - **`eval.run --fast` artık varsayılan olarak `.env`'deki retriever'ı ölçüyor.** Önce koda yazılı `dense`'i ölçüyordu; elle çalıştıran biri sistemin kullanmadığı bir retriever'ın sonucunu görebilirdi. Bu, kapı denenirken fark edildi.
+- **Sınırlar:** 41 soru, tek koşu, tek hakem. +3 soru anlamlı ama kesin değil. Ek dense kol aramaya ~9 ms ekliyor; LLM'in süresi yanında önemsiz.

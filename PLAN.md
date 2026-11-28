@@ -52,6 +52,7 @@ Takvim yok; her aşama, "bitti" kriteri sağlanınca tamamlanmış sayılır.
 - [x] 8a FastAPI: `/ask`, `/health` (D43).
 - [x] 8b Streamlit arayüzü, PDF'i ilgili sayfada açan kaynak bağlantıları (D44).
 - [x] 8c Docker: API ve arayüz imajları; compose profilleri `dev` / `gpu` / `obs`; CI'da amd64 derlemesi. Langfuse kapalıyken oluşan yavaşlık düzeltildi (D45).
+- [x] Varsayılan retriever `hybrid_en` oldu (D46). README tablosu için yapılan ölçümde D32'nin kararı tersine döndü: evidence recall@5 0,587 → 0,707, answer accuracy ≥ 0,5 26/41 → 29/41.
 - [ ] 8d README: mimari diyagram, sonuç tabloları, ekran görüntüsü.
 
 **Oturum başında:**
@@ -59,7 +60,7 @@ Takvim yok; her aşama, "bitti" kriteri sağlanınca tamamlanmış sayılır.
 2. Ollama çalışmıyorsa `ollama serve`. Cevap modeli `qwen3:4b-instruct`, hakem `gemma3:12b` (yalnızca tam eval'de).
 3. Ortamın sağlam olduğunu doğrula:
    - `uv run pytest` (113 test geçmeli; RAGAS kurulu değilse 4'ü atlanır)
-   - `uv run python -m eval.run --fast --retriever dense_tr_bm25_en` (18 makale, 49 soru, derinlik 20: Recall@5 0,768, MRR 0,509, evidence recall@5 0,587 çıkmalı)
+   - `uv run python -m eval.run --fast` (varsayılan `hybrid_en`, 18 makale, 49 soru, derinlik 20: Recall@5 0,780, MRR 0,539, evidence recall@5 0,707 çıkmalı)
 
 **Bilinen hatalar ve sınırlamalar:**
 - **Büyük tablolar neredeyse kopya parçalara bölünüyor:** Self-RAG Tablo 2, uzun altyazıyı ve başlığı tekrarlayan 22 parçaya bölünmüş; ne dense ne BM25 doğru parçayı ayırt edebiliyor (q08). Olası çözüm: parçalarda altyazıyı kısaltmak. Ölçülerek denenecek.

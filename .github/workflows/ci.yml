@@ -71,11 +71,11 @@ jobs:
       - name: Fast eval
         run: |
           set -o pipefail  # keep the eval's exit code through tee
-          # Quality gate: about one question below the measured baseline (2026-11-28:
-          # recall@5 0.768, evidence recall@5 0.587, identical on CI CPU and an M4, D42).
+          # Quality gate for the default retriever, about one question below its measured
+          # baseline (2026-11-28, hybrid_en: recall@5 0.780, evidence recall@5 0.707; D42, D46).
           # Lower these only deliberately, together with the change that needs it.
-          uv run --no-sync python -m eval.run --fast --retriever dense_tr_bm25_en \
-            --min-recall5 0.74 --min-evidence5 0.55 | tee fast-eval.log
+          uv run --no-sync python -m eval.run --fast --retriever hybrid_en \
+            --min-recall5 0.75 --min-evidence5 0.67 | tee fast-eval.log
           cp "$(sed -n 's/^saved -> //p' fast-eval.log)" fast-eval-result.json
 
       - name: Keep the result file

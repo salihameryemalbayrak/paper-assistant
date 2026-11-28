@@ -356,7 +356,7 @@ def main() -> None:
     mode.add_argument("--answers", action="store_true", help="answer every question with the LLM")
     parser.add_argument("--model", help="embedding model id (default: EMBEDDING_MODEL)")
     parser.add_argument(
-        "--retriever", choices=RETRIEVERS, default="dense", help="for --fast (default: dense)"
+        "--retriever", choices=RETRIEVERS, help="for --fast (default: RETRIEVER from .env)"
     )
     parser.add_argument("--reranker", choices=tuple(RERANKERS), default="", help="for --fast")
     parser.add_argument("--candidates", type=int, default=20, help="chunks given to the reranker")
@@ -387,7 +387,9 @@ def main() -> None:
         return
 
     depth = args.depth or get_settings().retrieval_depth
-    result = run_fast(model, args.retriever, args.reranker, args.candidates, depth)
+    # default: the retriever the system uses, so `--fast` measures what the answers get
+    retriever = args.retriever or get_settings().retriever
+    result = run_fast(model, retriever, args.reranker, args.candidates, depth)
     print_summary(result)
 
     RESULTS_DIR.mkdir(parents=True, exist_ok=True)

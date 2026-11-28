@@ -1,0 +1,399 @@
+{
+  "mode": "fast",
+  "date": "2026-11-28T12:22:04",
+  "git_commit": "1133a87",
+  "hardware": "Apple M4, macOS 26.6.2",
+  "run_name": "dense_chunks_multilingual_e5_small",
+  "retriever": "dense",
+  "retrieval_depth": null,
+  "reranker": null,
+  "rerank_candidates": null,
+  "reranker_counts": null,
+  "embedding_model": "intfloat/multilingual-e5-small",
+  "retrieval": "dense, Turkish query (no translation), top_k=10",
+  "translation_model": null,
+  "latency_excludes_translation": false,
+  "dataset": {
+    "file": "eval/dataset.jsonl",
+    "answerable": 41,
+    "total": 49,
+    "verified_by_human": 20,
+    "verified_by_evidence": 29
+  },
+  "corpus": {
+    "docs": 18,
+    "chunks": 1734
+  },
+  "latency_ms_median": 9.1,
+  "metrics": {
+    "all": {
+      "n": 41,
+      "recall@1": 0.35365853658536583,
+      "recall@3": 0.5609756097560976,
+      "recall@5": 0.5609756097560976,
+      "recall@10": 0.7804878048780488,
+      "mrr": 0.5121854432830043
+    },
+    "single_page": {
+      "n": 15,
+      "recall@1": 0.3333333333333333,
+      "recall@3": 0.6,
+      "recall@5": 0.6,
+      "recall@10": 0.8,
+      "mrr": 0.4902645502645503
+    },
+    "~term": {
+      "n": 16,
+      "recall@1": 0.375,
+      "recall@3": 0.5,
+      "recall@5": 0.5,
+      "recall@10": 0.78125,
+      "mrr": 0.47003968253968254
+    },
+    "table": {
+      "n": 10,
+      "recall@1": 0.9,
+      "recall@3": 0.9,
+      "recall@5": 0.9,
+      "recall@10": 1.0,
+      "mrr": 0.91
+    },
+    "figure": {
+      "n": 8,
+      "recall@1": 0.0,
+      "recall@3": 0.25,
+      "recall@5": 0.25,
+      "recall@10": 0.625,
+      "mrr": 0.1376488095238095
+    },
+    "comparison": {
+      "n": 8,
+      "recall@1": 0.0625,
+      "recall@3": 0.375,
+      "recall@5": 0.375,
+      "recall@10": 0.625,
+      "mrr": 0.4305555555555555
+    },
+    "~inference": {
+      "n": 11,
+      "recall@1": 0.5,
+      "recall@3": 0.6363636363636364,
+      "recall@5": 0.6363636363636364,
+      "recall@10": 0.8181818181818182,
+      "mrr": 0.6858585858585858
+    },
+    "~paraphrase": {
+      "n": 14,
+      "recall@1": 0.21428571428571427,
+      "recall@3": 0.5714285714285714,
+      "recall@5": 0.5714285714285714,
+      "recall@10": 0.75,
+      "mrr": 0.42389455782312924
+    }
+  },
+  "evidence": {
+    "all": {
+      "n": 25,
+      "evidence_recall@1": 0.2,
+      "evidence_recall@3": 0.37333333333333335,
+      "evidence_recall@5": 0.4066666666666667,
+      "evidence_recall@10": 0.76,
+      "evidence_complete@1": 0.2,
+      "evidence_complete@3": 0.24,
+      "evidence_complete@5": 0.24,
+      "evidence_complete@10": 0.64
+    },
+    "single_page": {
+      "n": 9,
+      "evidence_recall@1": 0.2222222222222222,
+      "evidence_recall@3": 0.3888888888888889,
+      "evidence_recall@5": 0.3888888888888889,
+      "evidence_recall@10": 0.7222222222222222,
+      "evidence_complete@1": 0.2222222222222222,
+      "evidence_complete@3": 0.3333333333333333,
+      "evidence_complete@5": 0.3333333333333333,
+      "evidence_complete@10": 0.6666666666666666
+    },
+    "table": {
+      "n": 6,
+      "evidence_recall@1": 0.5,
+      "evidence_recall@3": 0.5,
+      "evidence_recall@5": 0.5833333333333334,
+      "evidence_recall@10": 1,
+      "evidence_complete@1": 0.5,
+      "evidence_complete@3": 0.5,
+      "evidence_complete@5": 0.5,
+      "evidence_complete@10": 1.0
+    },
+    "figure": {
+      "n": 5,
+      "evidence_recall@1": 0,
+      "evidence_recall@3": 0,
+      "evidence_recall@5": 0,
+      "evidence_recall@10": 0.6,
+      "evidence_complete@1": 0.0,
+      "evidence_complete@3": 0.0,
+      "evidence_complete@5": 0.0,
+      "evidence_complete@10": 0.6
+    },
+    "comparison": {
+      "n": 5,
+      "evidence_recall@1": 0,
+      "evidence_recall@3": 0.5666666666666667,
+      "evidence_recall@5": 0.6333333333333333,
+      "evidence_recall@10": 0.7,
+      "evidence_complete@1": 0.0,
+      "evidence_complete@3": 0.0,
+      "evidence_complete@5": 0.0,
+      "evidence_complete@10": 0.2
+    }
+  },
+  "per_question": [
+    {
+      "id": "q01",
+      "type": "single_page",
+      "first_relevant_rank": null,
+      "evidence_found@5": null
+    },
+    {
+      "id": "q02",
+      "type": "single_page",
+      "first_relevant_rank": 1,
+      "evidence_found@5": null
+    },
+    {
+      "id": "q03",
+      "type": "single_page",
+      "first_relevant_rank": 1,
+      "evidence_found@5": null
+    },
+    {
+      "id": "q04",
+      "type": "single_page",
+      "first_relevant_rank": 9,
+      "evidence_found@5": null
+    },
+    {
+      "id": "q05",
+      "type": "single_page",
+      "first_relevant_rank": 7,
+      "evidence_found@5": null
+    },
+    {
+      "id": "q06",
+      "type": "single_page",
+      "first_relevant_rank": 2,
+      "evidence_found@5": null
+    },
+    {
+      "id": "q07",
+      "type": "table",
+      "first_relevant_rank": 1,
+      "evidence_found@5": null
+    },
+    {
+      "id": "q08",
+      "type": "table",
+      "first_relevant_rank": 1,
+      "evidence_found@5": null
+    },
+    {
+      "id": "q09",
+      "type": "table",
+      "first_relevant_rank": 1,
+      "evidence_found@5": null
+    },
+    {
+      "id": "q10",
+      "type": "table",
+      "first_relevant_rank": 1,
+      "evidence_found@5": null
+    },
+    {
+      "id": "q11",
+      "type": "figure",
+      "first_relevant_rank": 6,
+      "evidence_found@5": null
+    },
+    {
+      "id": "q12",
+      "type": "figure",
+      "first_relevant_rank": null,
+      "evidence_found@5": null
+    },
+    {
+      "id": "q13",
+      "type": "figure",
+      "first_relevant_rank": null,
+      "evidence_found@5": null
+    },
+    {
+      "id": "q14",
+      "type": "comparison",
+      "first_relevant_rank": 6,
+      "evidence_found@5": null
+    },
+    {
+      "id": "q15",
+      "type": "comparison",
+      "first_relevant_rank": 9,
+      "evidence_found@5": null
+    },
+    {
+      "id": "q16",
+      "type": "comparison",
+      "first_relevant_rank": 2,
+      "evidence_found@5": null
+    },
+    {
+      "id": "q21",
+      "type": "single_page",
+      "first_relevant_rank": null,
+      "evidence_found@5": "0/1"
+    },
+    {
+      "id": "q22",
+      "type": "single_page",
+      "first_relevant_rank": 1,
+      "evidence_found@5": "2/2"
+    },
+    {
+      "id": "q23",
+      "type": "single_page",
+      "first_relevant_rank": null,
+      "evidence_found@5": "0/1"
+    },
+    {
+      "id": "q24",
+      "type": "single_page",
+      "first_relevant_rank": 10,
+      "evidence_found@5": "0/1"
+    },
+    {
+      "id": "q25",
+      "type": "table",
+      "first_relevant_rank": 1,
+      "evidence_found@5": "1/2"
+    },
+    {
+      "id": "q26",
+      "type": "figure",
+      "first_relevant_rank": 8,
+      "evidence_found@5": "0/1"
+    },
+    {
+      "id": "q27",
+      "type": "figure",
+      "first_relevant_rank": 7,
+      "evidence_found@5": "0/1"
+    },
+    {
+      "id": "q28",
+      "type": "comparison",
+      "first_relevant_rank": 2,
+      "evidence_found@5": "2/3"
+    },
+    {
+      "id": "q29",
+      "type": "comparison",
+      "first_relevant_rank": 3,
+      "evidence_found@5": "1/2"
+    },
+    {
+      "id": "q31",
+      "type": "table",
+      "first_relevant_rank": 10,
+      "evidence_found@5": "0/1"
+    },
+    {
+      "id": "q32",
+      "type": "table",
+      "first_relevant_rank": 1,
+      "evidence_found@5": "1/1"
+    },
+    {
+      "id": "q33",
+      "type": "table",
+      "first_relevant_rank": 1,
+      "evidence_found@5": "2/2"
+    },
+    {
+      "id": "q34",
+      "type": "figure",
+      "first_relevant_rank": 3,
+      "evidence_found@5": "0/3"
+    },
+    {
+      "id": "q35",
+      "type": "figure",
+      "first_relevant_rank": null,
+      "evidence_found@5": "0/3"
+    },
+    {
+      "id": "q36",
+      "type": "figure",
+      "first_relevant_rank": 3,
+      "evidence_found@5": "0/2"
+    },
+    {
+      "id": "q37",
+      "type": "single_page",
+      "first_relevant_rank": 1,
+      "evidence_found@5": "3/3"
+    },
+    {
+      "id": "q38",
+      "type": "single_page",
+      "first_relevant_rank": 1,
+      "evidence_found@5": "1/2"
+    },
+    {
+      "id": "q39",
+      "type": "comparison",
+      "first_relevant_rank": 2,
+      "evidence_found@5": "2/3"
+    },
+    {
+      "id": "q41",
+      "type": "single_page",
+      "first_relevant_rank": 2,
+      "evidence_found@5": "1/1"
+    },
+    {
+      "id": "q42",
+      "type": "single_page",
+      "first_relevant_rank": 2,
+      "evidence_found@5": "0/1"
+    },
+    {
+      "id": "q43",
+      "type": "single_page",
+      "first_relevant_rank": 2,
+      "evidence_found@5": "0/2"
+    },
+    {
+      "id": "q44",
+      "type": "table",
+      "first_relevant_rank": 1,
+      "evidence_found@5": "0/3"
+    },
+    {
+      "id": "q45",
+      "type": "table",
+      "first_relevant_rank": 1,
+      "evidence_found@5": "2/2"
+    },
+    {
+      "id": "q46",
+      "type": "comparison",
+      "first_relevant_rank": 3,
+      "evidence_found@5": "2/3"
+    },
+    {
+      "id": "q47",
+      "type": "comparison",
+      "first_relevant_rank": 1,
+      "evidence_found@5": "2/3"
+    }
+  ]
+}
